@@ -13,6 +13,7 @@ def aggregate_and_save_npz(source_dir, output_path, suffix=".npy"):
         path = os.path.join(source_dir, fname)
         try:
             x = np.load(path)
+            x = np.squeeze(x)
             if x.ndim != 2:
                 print(f"Skipping {fname}: shape {x.shape}")
                 continue
@@ -43,8 +44,8 @@ def aggregate_and_save_npz(source_dir, output_path, suffix=".npy"):
 import os
 
 def main():
-    base_static_dir = "/home/tim/Work/quantum/data/blemore/encoded_videos/static_data"
-    # base_static_dir = "/home/user/Work/quantum/data/blemore/encoded_videos/static_data"
+    # base_static_dir = "/home/tim/Work/quantum/data/blemore/encoded_videos/static_data"
+    base_static_dir = "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data"
 
     # os.makedirs(base_static_dir, exist_ok=True)
 
@@ -57,7 +58,10 @@ def main():
         # "videomae": "/home/tim/Work/quantum/data/blemore/encoded_videos/VideoMAEv2_reshaped/",
         # "hubert": "/media/user/Seagate Hub/mixed_emotion_challenge/audio_encodings/hubert_large/",
         # "wavlm": "/media/user/Seagate Hub/mixed_emotion_challenge/audio_encodings/wavlm_large/",
-        "hicmae": "/home/tim/Work/quantum/data/blemore/encoded_videos/original_encodings/HiCMAE"
+        # "hicmae": "/home/tim/Work/quantum/data/blemore/encoded_videos/original_encodings/HiCMAE"
+
+        "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
+        "videomae":  "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
     }
 
     for encoder, path in encoding_paths.items():
