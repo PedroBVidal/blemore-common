@@ -9,7 +9,8 @@ import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from model.model import ConfigurableLinearNN
+from model.model import ConfigurableLinearNN, Backbone_with_ConfigurableLinearNN
+from model.iresnet_1d import iresnet18_1d, iresnet50_1d
 from model.post_process import get_top_2_predictions, probs2dict
 from trainer.trainer import Trainer
 from utils.create_soft_labels import create_labels
@@ -34,32 +35,34 @@ hparams = {
     "weight_decay": 1e-3,
 }
 
-data_folder = "/home/tim/Work/quantum/data/blemore/"
+# data_folder = "/home/tim/Work/quantum/data/blemore/"
+data_folder = "/home/pbqv20/BlEmoRe_backup"
 
 train_metadata_path = os.path.join(data_folder, "train_metadata.csv")
 test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
 
 encoding_paths = {
     # vision
-    "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
-    "imagebind": os.path.join(data_folder, "encoded_videos/static_data/imagebind_static_features.npz"),
-    "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
-    "videoswintransformer": os.path.join(data_folder,
-                                         "encoded_videos/static_data/videoswintransformer_static_features.npz"),
-    "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
+    # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
+    # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
+    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
+    # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
+    # "videoswintransformer": os.path.join(data_folder,
+    #                                      "encoded_videos/static_data/videoswintransformer_static_features.npz"),
+    # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
 
     # audio
-    "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
-    "hubert": os.path.join(data_folder, "encoded_videos/static_data/hubert_static_features.npz"),
+    # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
+    # "hubert": os.path.join(data_folder, "encoded_videos/static_data/hubert_static_features.npz"),
 
     # fused
-    "imagebind_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_wavlm_fused.npz"),
-    "imagebind_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_hubert_fused.npz"),
-    "videomae_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_wavlm_fused.npz"),
-    "videomae_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_hubert_fused.npz"),
+    # "imagebind_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_wavlm_fused.npz"),
+    # "imagebind_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_hubert_fused.npz"),
+    # "videomae_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_wavlm_fused.npz"),
+    # "videomae_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_hubert_fused.npz"),
 
     # multimodal
-    "hicmae": os.path.join(data_folder, "encoded_videos/static_data/hicmae_static_features.npz"),
+    # "hicmae": os.path.join(data_folder, "encoded_videos/static_data/hicmae_static_features.npz"),
 }
 
 
@@ -70,6 +73,10 @@ def select_model(model_type, input_dim, output_dim):
         return ConfigurableLinearNN(input_dim=input_dim, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=256)
     elif model_type == "MLP_512":
         return ConfigurableLinearNN(input_dim=input_dim, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
+    elif model_type == "resnet18_1d":
+        backbone = iresnet18_1d(input_channels=1, num_features=128)
+        class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=128, output_dim=output_dim, model_type= model_type, n_layers=0)
+        return class_model
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -235,12 +242,19 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 
 
 def main(do_val=True, do_test=False):
-    vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
-    audio_encoders = ["wavlm", "hubert"]
-    encoder_fusions = ["imagebind_wavlm", "imagebind_hubert", "videomae_wavlm", "videomae_hubert"]
+    # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
+    vision_encoders = ["imagebind"]
+
+    # audio_encoders = ["wavlm", "hubert"]
+    audio_encoders = []
+
+    # encoder_fusions = ["imagebind_wavlm", "imagebind_hubert", "videomae_wavlm", "videomae_hubert"]
+    encoder_fusions = []
+
     encoders = vision_encoders + audio_encoders + encoder_fusions
 
-    model_types = ["Linear", "MLP_256", "MLP_512"]
+    # model_types = ["Linear", "MLP_256", "MLP_512"]
+    model_types = ["resnet18_1d"]
 
     if do_val:
         train_df = pd.read_csv(train_metadata_path)

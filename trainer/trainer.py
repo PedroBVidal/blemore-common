@@ -30,12 +30,15 @@ class Trainer(object):
 
         for batch_idx, (data, target) in enumerate(self.data_loader):
             data, target = data.to(self.device), target.to(self.device)
-
+            if len(data.shape) == 2:
+                data = torch.unsqueeze(data, 1)
+            print(f'    train_epoch()    batch_idx: {batch_idx}/{len(self.data_loader)}    data.shape: {data.shape}    target.shape: {target.shape}', end='\r')
             self.optimizer.zero_grad()
             probs, logits, loss = self.model(data, target)
             loss.backward()
             self.optimizer.step()
             total_loss += loss.item()
+        print()
 
         avg_loss = total_loss / len(self.data_loader)
         return avg_loss
@@ -49,12 +52,16 @@ class Trainer(object):
         all_logits = []
 
         with torch.no_grad():
-            for data, target in self.valid_data_loader:
+            for batch_idx, (data, target) in enumerate(self.valid_data_loader):
                 data, target = data.to(self.device), target.to(self.device)
+                if len(data.shape) == 2:
+                    data = torch.unsqueeze(data, 1)
+                print(f'    validate()    batch_idx: {batch_idx}/{len(self.valid_data_loader)}    data.shape: {data.shape}    target.shape: {target.shape}', end='\r')
                 probs, logits, loss = self.model(data, target)
                 total_loss += loss.item()
                 all_probs.append(probs.cpu().numpy())
                 all_logits.append(logits.cpu().numpy())
+            print()
 
         all_probs = np.concatenate(all_probs, axis=0)
         all_logits = np.concatenate(all_logits, axis=0)
