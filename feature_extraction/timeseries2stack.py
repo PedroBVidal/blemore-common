@@ -27,15 +27,19 @@ def aggregate_and_save_npz(source_dir, output_path, suffix=".npy"):
             #     np.percentile(x, 75, axis=0),
             #     np.percentile(x, 90, axis=0),
             # ])
-            agg = x[int(len(x)/2),:]    # middle frame of the video (JUST DIMENSION TEST)
+            # agg = x[int(len(x)/2),:]    # middle frame of the video (JUST DIMENSION TEST)
+            agg = x
 
             all_features.append(agg)
-            all_filenames.append(fname.replace(suffix, ""))
+            # all_filenames.append(fname.replace(suffix, ""))
+            all_filenames.extend([fname.replace(suffix, "")] * len(agg))
 
         except Exception as e:
             print(f"Failed: {fname} — {e}")
 
-    X = np.stack(all_features)
+    # X = np.stack(all_features)
+    # filenames = np.array(all_filenames)
+    X = np.vstack(all_features)
     filenames = np.array(all_filenames)
 
     np.savez(output_path, X=X, filenames=filenames)
