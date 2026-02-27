@@ -31,7 +31,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 hparams = {
     # "batch_size": 32,
     "batch_size": 128,
-    "learning_rate": 5e-6,
+    # "learning_rate": 5e-6,
+    "learning_rate": 5e-8,
     "num_epochs": 200,
     "weight_decay": 1e-3,
 }
