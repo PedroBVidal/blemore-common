@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import os
+import time
 
 from model.post_process import grid_search_thresholds
 from utils.subsample_utils import aggregate_subsamples
@@ -44,7 +45,7 @@ class Trainer(object):
         return avg_loss
 
     def validate(self):
-        print("\nValidating model...")
+        print("    Validating model...")
 
         self.model.eval()
         total_loss = 0
@@ -80,7 +81,9 @@ class Trainer(object):
         best_epoch_stats = None
         best_model_path = None
 
+        total_time = 0.0
         for epoch in range(self.epochs):
+            epoch_start_time = time.time()
             print(f"Epoch [{epoch + 1}/{self.epochs}]")
             train_loss = self.train_epoch()
             print(f"    Train Loss: {train_loss:.4f}")
@@ -130,6 +133,15 @@ class Trainer(object):
                         "best_acc_presence": stats['acc_presence'],
                         "best_acc_salience": stats['acc_salience'],
                     }
+            
+            epoch_end_time = time.time()
+            epoch_elapsed_time = epoch_end_time-epoch_start_time
+            estimated_time = (self.epochs - epoch+1) * epoch_elapsed_time
+            total_time += epoch_elapsed_time
+            print()
+            print(f"    Epoch elapsed time: {epoch_elapsed_time:.2f} sec    {epoch_elapsed_time/60:.2f} min    {epoch_elapsed_time/3600:.2f} hour")
+            print(f"    Estimated time: {estimated_time:.2f} sec    {estimated_time/60:.2f} min    {estimated_time/3600:.2f} hour")
+            print(f"    Total time: {total_time:.2f} sec    {total_time/60:.2f} min    {total_time/3600:.2f} hour")
             print('-------------')
 
         return best_epoch_stats, best_model_path
