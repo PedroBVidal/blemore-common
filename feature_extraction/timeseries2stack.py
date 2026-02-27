@@ -42,6 +42,8 @@ def aggregate_and_save_npz(source_dir, output_path, suffix=".npy"):
     X = np.vstack(all_features)
     filenames = np.array(all_filenames)
 
+    X = ((X / np.max(X)) - 0.5) / 0.5     # normalize data to range [-1, 1]
+
     np.savez(output_path, X=X, filenames=filenames)
     print(f"Saved: {output_path} (X shape: {X.shape}, {len(filenames)} filenames)")
 

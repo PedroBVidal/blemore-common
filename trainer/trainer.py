@@ -70,6 +70,7 @@ class Trainer(object):
         if self.subsample_aggregation:
             val_filenames, all_probs = aggregate_subsamples(val_filenames, all_logits)
 
+        print(f'    validate()    doing grid search of thresholds...')
         ret = grid_search_thresholds(val_filenames, all_probs)
         avg_loss = total_loss / len(self.valid_data_loader)
         ret["val_loss"] = avg_loss
@@ -80,8 +81,9 @@ class Trainer(object):
         best_model_path = None
 
         for epoch in range(self.epochs):
+            print(f"Epoch [{epoch + 1}/{self.epochs}]")
             train_loss = self.train_epoch()
-            print(f"Epoch [{epoch + 1}/{self.epochs}], Train Loss: {train_loss:.4f}")
+            print(f"    Train Loss: {train_loss:.4f}")
 
             if writer:
                 writer.add_scalar("Loss/train", train_loss, epoch)
@@ -90,7 +92,7 @@ class Trainer(object):
                 stats = self.validate()
                 val_score = 0.5 * stats['acc_presence'] + 0.5 * stats['acc_salience']  # scoring metric
 
-                print(f"Epoch [{epoch + 1}/{self.epochs}], "
+                print(f"    Epoch [{epoch + 1}/{self.epochs}], "
                       f"Validation Loss: {stats['val_loss']:.4f}, "
                       f"Best Alpha: {stats['alpha']:.4f}, "
                       f"Best Beta: {stats['beta']:.4f}, "
@@ -128,5 +130,6 @@ class Trainer(object):
                         "best_acc_presence": stats['acc_presence'],
                         "best_acc_salience": stats['acc_salience'],
                     }
+            print('-------------')
 
         return best_epoch_stats, best_model_path
