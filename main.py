@@ -2,6 +2,7 @@ import os
 import json
 from collections import Counter
 
+import argparse
 import random
 import numpy as np
 import pandas as pd
@@ -25,6 +26,14 @@ torch.manual_seed(SEED)
 torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--annotation', type=str, default='', help='Information to be added to output folder')
+    args = parser.parse_args()
+    return args
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -141,7 +150,7 @@ def evaluate_model(model, test_loader, alpha, beta, encoder):
 
     return acc_presence, acc_salience
 
-def run_validation(train_df, train_labels, encoders, model_types):
+def run_validation(train_df, train_labels, encoders, model_types, args):
     folds = [0, 1, 2, 3, 4]
 
     summary_rows = []
@@ -156,6 +165,8 @@ def run_validation(train_df, train_labels, encoders, model_types):
                 train_dataset, val_dataset = prepare_split_2d(train_files, train_labels_fold, val_files, val_labels, encoding_path)
 
                 log_dir = f"runs/{encoder}_{model_type}_fold{fold_id}"
+                if args.annotation:
+                    log_dir += f'annotation={args.annotation}'
                 save_prefix = f"{encoder}_{model_type}_fold{fold_id}"
                 best_epoch, _ = train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix)
 
@@ -243,7 +254,7 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
     print(test_summary_df.groupby(["encoder", "model"])[["test_acc_presence", "test_acc_salience"]].mean())
 
 
-def main(do_val=True, do_test=False):
+def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
     vision_encoders = ["imagebind"]
 
@@ -262,7 +273,7 @@ def main(do_val=True, do_test=False):
         train_df = pd.read_csv(train_metadata_path)
         train_labels = create_labels(train_df.to_dict(orient="records"))
 
-        run_validation(train_df, train_labels, encoders, model_types)
+        run_validation(train_df, train_labels, encoders, model_types, args)
 
     if do_test:
         test_df = pd.read_csv(test_metadata_path)
@@ -271,4 +282,5 @@ def main(do_val=True, do_test=False):
         run_test(train_df, train_labels, test_df, test_labels, encoders, model_types, use_best_model_from_val=False)
 
 if __name__ == "__main__":
-    main(do_val=True, do_test=False)
+    args = parse_args()
+    main(do_val=True, do_test=False, args=args)
