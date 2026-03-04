@@ -159,7 +159,8 @@ def evaluate_model(model, test_loader, alpha, beta, encoder):
     return acc_presence, acc_salience
 
 def run_validation(train_df, train_labels, encoders, model_types, args):
-    folds = [0, 1, 2, 3, 4]
+    # folds = [0, 1, 2, 3, 4]
+    folds = [0]
 
     summary_rows = []
     for encoder in encoders:
