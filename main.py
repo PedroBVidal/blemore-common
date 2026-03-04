@@ -166,7 +166,7 @@ def run_validation(train_df, train_labels, encoders, model_types, args):
 
                 log_dir = f"runs/{encoder}_{model_type}_fold{fold_id}"
                 if args.annotation:
-                    log_dir += f'annotation={args.annotation}'
+                    log_dir += f'_annotation={args.annotation}'
                 save_prefix = f"{encoder}_{model_type}_fold{fold_id}"
                 best_epoch, _ = train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix)
 
