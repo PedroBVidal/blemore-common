@@ -2,6 +2,7 @@ import os
 import json
 from collections import Counter
 
+import argparse
 import random
 import numpy as np
 import pandas as pd
@@ -25,41 +26,58 @@ torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--annotation', type=str, default='', help='Information to be added to output folder')
+    args = parser.parse_args()
+    return args
+
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 hparams = {
     "batch_size": 32,
     "learning_rate": 5e-6,
-    "num_epochs": 200,
+    # "num_epochs": 200,
+    "num_epochs": 400,
     "weight_decay": 1e-3,
 }
 
-data_folder = "/home/tim/Work/quantum/data/blemore/"
+# data_folder = "/home/tim/Work/quantum/data/blemore/"
+data_folder = "/home/pbqv20/BlEmoRe_backup"
+
+
 
 train_metadata_path = os.path.join(data_folder, "train_metadata.csv")
+# train_metadata_path = os.path.join(data_folder, "train_metadata_balanced.csv")
+
 test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
+
+
 
 encoding_paths = {
     # vision
-    "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
-    "imagebind": os.path.join(data_folder, "encoded_videos/static_data/imagebind_static_features.npz"),
-    "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
-    "videoswintransformer": os.path.join(data_folder,
-                                         "encoded_videos/static_data/videoswintransformer_static_features.npz"),
-    "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
+    # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
+    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
+    # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
+    # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
+    # "videoswintransformer": os.path.join(data_folder,
+    #                                      "encoded_videos/static_data/videoswintransformer_static_features.npz"),
+    # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
 
     # audio
-    "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
-    "hubert": os.path.join(data_folder, "encoded_videos/static_data/hubert_static_features.npz"),
+    # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
+    # "hubert": os.path.join(data_folder, "encoded_videos/static_data/hubert_static_features.npz"),
 
     # fused
-    "imagebind_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_wavlm_fused.npz"),
-    "imagebind_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_hubert_fused.npz"),
-    "videomae_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_wavlm_fused.npz"),
-    "videomae_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_hubert_fused.npz"),
+    # "imagebind_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_wavlm_fused.npz"),
+    # "imagebind_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_hubert_fused.npz"),
+    # "videomae_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_wavlm_fused.npz"),
+    # "videomae_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_hubert_fused.npz"),
 
     # multimodal
-    "hicmae": os.path.join(data_folder, "encoded_videos/static_data/hicmae_static_features.npz"),
+    # "hicmae": os.path.join(data_folder, "encoded_videos/static_data/hicmae_static_features.npz"),
 }
 
 
@@ -132,8 +150,9 @@ def evaluate_model(model, test_loader, alpha, beta, encoder):
 
     return acc_presence, acc_salience
 
-def run_validation(train_df, train_labels, encoders, model_types):
-    folds = [0, 1, 2, 3, 4]
+def run_validation(train_df, train_labels, encoders, model_types, args):
+    # folds = [0, 1, 2, 3, 4]
+    folds = [0, 1]
 
     summary_rows = []
     for encoder in encoders:
@@ -147,6 +166,8 @@ def run_validation(train_df, train_labels, encoders, model_types):
                 train_dataset, val_dataset = prepare_split_2d(train_files, train_labels_fold, val_files, val_labels, encoding_path)
 
                 log_dir = f"runs/{encoder}_{model_type}_fold{fold_id}"
+                if args.annotation:
+                    log_dir += f'_annotation={args.annotation}'
                 save_prefix = f"{encoder}_{model_type}_fold{fold_id}"
                 best_epoch, _ = train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix)
 
@@ -234,25 +255,37 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
     print(test_summary_df.groupby(["encoder", "model"])[["test_acc_presence", "test_acc_salience"]].mean())
 
 
-def main(do_val=True, do_test=False):
-    vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
-    audio_encoders = ["wavlm", "hubert"]
-    encoder_fusions = ["imagebind_wavlm", "imagebind_hubert", "videomae_wavlm", "videomae_hubert"]
+def main(do_val=True, do_test=False, args=None):
+    # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
+    vision_encoders = ["imagebind"]
+    
+    # audio_encoders = ["wavlm", "hubert"]
+    audio_encoders = []
+
+    # encoder_fusions = ["imagebind_wavlm", "imagebind_hubert", "videomae_wavlm", "videomae_hubert"]
+    encoder_fusions = []
+
     encoders = vision_encoders + audio_encoders + encoder_fusions
 
-    model_types = ["Linear", "MLP_256", "MLP_512"]
+    # model_types = ["Linear", "MLP_256", "MLP_512"]
+    model_types = ["MLP_512"]
+
 
     if do_val:
+        print(f"Loading train protocol \'{train_metadata_path}\'")
         train_df = pd.read_csv(train_metadata_path)
         train_labels = create_labels(train_df.to_dict(orient="records"))
 
-        run_validation(train_df, train_labels, encoders, model_types)
+        run_validation(train_df, train_labels, encoders, model_types, args)
 
     if do_test:
+        print(f"Loading test protocol \'{train_metadata_path}\'")
         test_df = pd.read_csv(test_metadata_path)
         test_labels = create_labels(test_df.to_dict(orient="records"))
 
         run_test(train_df, train_labels, test_df, test_labels, encoders, model_types, use_best_model_from_val=False)
 
+
 if __name__ == "__main__":
-    main(do_val=True, do_test=False)
+    args = parse_args()
+    main(do_val=True, do_test=False, args=args)
