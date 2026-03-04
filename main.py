@@ -12,6 +12,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from model.model import ConfigurableLinearNN, Backbone_with_ConfigurableLinearNN
 from model.iresnet_1d import iresnet18_1d, iresnet50_1d
+from model.iresnet_2d import get_model
 from model.post_process import get_top_2_predictions, probs2dict
 from trainer.trainer import Trainer
 from utils.create_soft_labels import create_labels
@@ -56,11 +57,11 @@ encoding_paths = {
     # vision
     # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
     # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
-    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
+    # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
     # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
-    # "videoswintransformer": os.path.join(data_folder,
-    #                                      "encoded_videos/static_data/videoswintransformer_static_features.npz"),
+    # "videoswintransformer": os.path.join(data_folder, "encoded_videos/static_data/videoswintransformer_static_features.npz"),
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
+    "rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/rawimgs112x112_STACK_features.npz"),
 
     # audio
     # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
@@ -87,6 +88,13 @@ def select_model(model_type, input_dim, output_dim):
     elif model_type == "resnet18_1d":
         backbone = iresnet18_1d(input_channels=1, num_features=128)
         class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=128, output_dim=output_dim, model_type= model_type, n_layers=0)
+        return class_model
+    elif model_type == "resnet18_2d":
+        network = "r18"
+        fp16 = True
+        num_features=512
+        backbone = get_model(network, dropout=0.0, fp16=fp16, num_features=num_features)
+        class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=num_features, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
         return class_model
     else:
         raise ValueError(f"Unknown model type: {model_type}")
@@ -256,7 +264,8 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
-    vision_encoders = ["imagebind"]
+    # vision_encoders = ["imagebind"]
+    vision_encoders = ["rawimgs112x112"]
 
     # audio_encoders = ["wavlm", "hubert"]
     audio_encoders = []
@@ -267,7 +276,8 @@ def main(do_val=True, do_test=False, args=None):
     encoders = vision_encoders + audio_encoders + encoder_fusions
 
     # model_types = ["Linear", "MLP_256", "MLP_512"]
-    model_types = ["resnet18_1d"]
+    # model_types = ["resnet18_1d"]
+    model_types = ["resnet18_2d"]
 
     if do_val:
         train_df = pd.read_csv(train_metadata_path)
