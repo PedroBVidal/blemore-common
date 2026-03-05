@@ -42,8 +42,8 @@ hparams = {
     # "batch_size": 32,
     "batch_size": 128,
     # "learning_rate": 5e-6,
-    "learning_rate": 5e-8,
-    "num_epochs": 200,
+    "learning_rate": 1e-7,
+    "num_epochs": 400,
     "weight_decay": 1e-3,
 }
 
@@ -61,7 +61,7 @@ encoding_paths = {
     # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
     # "videoswintransformer": os.path.join(data_folder, "encoded_videos/static_data/videoswintransformer_static_features.npz"),
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
-    "rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/rawimgs112x112_STACK_features.npz"),
+    "rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/rawimgs112x112_STACK_features_subsampling=5.npz"),
 
     # audio
     # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
