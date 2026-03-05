@@ -6,6 +6,13 @@ import re
 import cv2
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--subsampling-rate', type=int, default=-1, help='-1 or 0 mean ALL FRAMES, WITH NO SUBSAMPLING')
+    args = parser.parse_args()
+    return args
+
+
 def aggregate_and_save_npz(source_dir, output_path, suffix=".npy"):
     all_features = []
     all_filenames = []
@@ -67,12 +74,19 @@ def get_imediate_subdirs_paths(source_dir):
     subdirs.sort(key=natural_sort_key)
     return subdirs
 
-def get_files_names(subdir_path, suffix=".png"):
-    files = [
+def get_files_names(subdir_path, suffix=".png", subsampling_rate=-1):   # subsampling=-1 means NO SUBSAMPLING (GET ALL FILES)
+    files_tmp = [
         f for f in os.listdir(subdir_path) 
         if os.path.isfile(os.path.join(subdir_path, f)) and f.endswith(suffix)
     ]
-    files.sort(key=natural_sort_key)
+    files_tmp.sort(key=natural_sort_key)
+
+    # return all files, with on subsampling
+    if subsampling_rate <= 0:
+        return files_tmp
+
+    files = [files_tmp[i] for i in range(0, len(files_tmp), subsampling_rate)]
+
     return files
 
 def load_normalize_transpose_img(img_path):
@@ -82,13 +96,13 @@ def load_normalize_transpose_img(img_path):
     img = ((img / 255.) - 0.5) / 0.5    # normalize data to range [-1, 1]
     return img.astype(np.float32)
 
-def aggregate_raw_imgs_and_save_npz(source_dir, output_path, suffix=".png"):
+def aggregate_raw_imgs_and_save_npz(source_dir, output_path, suffix=".png", subsampling_rate=-1):
     all_subdirs_videos_paths = get_imediate_subdirs_paths(source_dir)
     # print('all_subdirs_videos_paths:', all_subdirs_videos_paths)
-    print(f"Counting total frams in source dir '{source_dir}'")
-    num_total_frames = sum([len(get_files_names(subdir_video_path, suffix)) for subdir_video_path in all_subdirs_videos_paths])
+    print(f"Counting total frams in source dir '{source_dir}' (subsampling_rate={subsampling_rate})")
+    num_total_frames = sum([len(get_files_names(subdir_video_path, suffix, subsampling_rate)) for subdir_video_path in all_subdirs_videos_paths])
     print(f"    num_total_frames:", num_total_frames)
-    files_first_dir = get_files_names(all_subdirs_videos_paths[0], suffix)
+    files_first_dir = get_files_names(all_subdirs_videos_paths[0], suffix, subsampling_rate)
     img_first_frame = cv2.imread(os.path.join(all_subdirs_videos_paths[0], files_first_dir[0]))
     all_frames_array_shape = (num_total_frames, img_first_frame.shape[2], img_first_frame.shape[0], img_first_frame.shape[1])
     
@@ -97,10 +111,13 @@ def aggregate_raw_imgs_and_save_npz(source_dir, output_path, suffix=".png"):
     all_filenames = [None] * num_total_frames
     idx_frame_global = 0
     for idx_subdir_video, subdir_video_path in enumerate(all_subdirs_videos_paths):
-        frames_filenames = get_files_names(subdir_video_path, suffix)
+        frames_filenames = get_files_names(subdir_video_path, suffix, subsampling_rate)
         video_name = os.path.basename(subdir_video_path)
         for idx_fname, fname in enumerate(frames_filenames):
-            print(f"idx_frame_global {idx_frame_global}/{num_total_frames} ({idx_frame_global/num_total_frames*100:.1f}%)  -  video {idx_subdir_video}/{len(all_subdirs_videos_paths)} '{os.path.basename(subdir_video_path)}'  -  frame {idx_fname}/{len(frames_filenames)}", end='\r')
+            print(f"idx_frame_global {idx_frame_global}/{num_total_frames} ({idx_frame_global/num_total_frames*100:.1f}%)  - ",
+                  f"video {idx_subdir_video}/{len(all_subdirs_videos_paths)} '{os.path.basename(subdir_video_path)}'  - ",
+                  f"frame {idx_fname}/{len(frames_filenames)}  - ",
+                  f"subsampling_rate {subsampling_rate}", end='\r')
 
             if not fname.endswith(suffix):
                 continue
@@ -135,6 +152,8 @@ def aggregate_raw_imgs_and_save_npz(source_dir, output_path, suffix=".png"):
 
 
 def main():
+    args = parse_args()
+
     # base_static_dir = "/home/tim/Work/quantum/data/blemore/encoded_videos/static_data"
     base_static_dir = "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data"
 
@@ -161,7 +180,9 @@ def main():
         output_path = os.path.join(base_static_dir, f"{encoder}_STACK_features.npz")
         print(f"Processing {encoder} from {path}...")    
         if encoder == "rawimgs112x112":
-            aggregate_raw_imgs_and_save_npz(path, output_path, suffix=".png")
+            if args.subsampling_rate > 0:
+                output_path = f"{os.path.splitext(output_path)[0]}_subsampling={args.subsampling_rate}{os.path.splitext(output_path)[1]}"
+            aggregate_raw_imgs_and_save_npz(path, output_path, suffix=".png", subsampling_rate=args.subsampling_rate)
         else:
             aggregate_and_save_npz(path, output_path, suffix=".npy")
         print(f"Saved to {output_path}\n")
