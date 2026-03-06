@@ -28,12 +28,14 @@ def get_imediate_subdirs_paths(source_dir):
     return subdirs
 
 
-def get_files_names(subdir_path, suffix=".png", sequence_size=16):
+def get_files_names(subdir_path, suffix=".png", sequence_size=16):   # sequence_size <= 0 means ALL FILES
     files_tmp = [
         f for f in os.listdir(subdir_path) 
         if os.path.isfile(os.path.join(subdir_path, f)) and f.endswith(suffix)
     ]
     files_tmp.sort(key=natural_sort_key)
+    if sequence_size <= 0:
+        return files_tmp
     assert len(files_tmp) >= sequence_size, f"Error, len(files_tmp) ({len(files_tmp)}) < sequence_size ({sequence_size})"
 
     # return all files, with on subsampling
@@ -96,6 +98,47 @@ def aggregate_sequence_imgs_and_save_npz(source_dir, output_path, suffix=".png",
 
 
 
+def aggregate_sequence_features_and_save_npz(source_dir, output_path, suffix=".npy", sequence_size=16):
+    all_features = []
+    all_filenames = []
+
+    for fname in tqdm(os.listdir(source_dir)):
+        if not fname.endswith(suffix):
+            continue
+
+        path = os.path.join(source_dir, fname)
+        x = np.load(path)
+        x = np.squeeze(x)
+        if x.ndim != 2:
+            print(f"Skipping {fname}: shape {x.shape}")
+            continue
+
+        assert len(x) >= sequence_size, f"Error, len(x) ({len(x)}) < sequence_size ({sequence_size})"
+        indices_to_select = np.linspace(0, len(x)-1, sequence_size, dtype=int)
+        assert len(indices_to_select) == sequence_size, f"Error, len(indices_to_select) ({len(indices_to_select)}) != sequence_size ({sequence_size})"
+        agg = x[indices_to_select,:]
+        
+        # agg = np.concatenate([
+        #     x.mean(axis=0),
+        #     x.std(axis=0),
+        #     np.percentile(x, 10, axis=0),
+        #     np.percentile(x, 25, axis=0),
+        #     np.percentile(x, 50, axis=0),  # median
+        #     np.percentile(x, 75, axis=0),
+        #     np.percentile(x, 90, axis=0),
+        # ])
+
+        all_features.append(agg)
+        all_filenames.append(fname.replace(suffix, ""))
+
+    X = np.stack(all_features)
+    filenames = np.array(all_filenames)
+
+    np.savez(output_path, X=X, filenames=filenames)
+    print(f"Saved: {output_path} (X shape: {X.shape}, {len(filenames)} filenames)")
+
+
+
 def main():
     args = parse_args()
 
@@ -116,16 +159,23 @@ def main():
         # "hicmae": "/home/tim/Work/quantum/data/blemore/encoded_videos/original_encodings/HiCMAE"
 
         # "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
+        "seq_imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
         # "videomae":  "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
 
         # "rawimgs112x112": "/home/pbqv20/BlEmoRe_backup/data_frames_DETECTED_FACES_RETINAFACE_scales=[0.25]_nms=0.4/imgs_112x112/train/all_parts"
-        "seq_rawimgs112x112": "/home/pbqv20/BlEmoRe_backup/data_frames_DETECTED_FACES_RETINAFACE_scales=[0.25]_nms=0.4/imgs_112x112/train/all_parts"
+        # "seq_rawimgs112x112": "/home/pbqv20/BlEmoRe_backup/data_frames_DETECTED_FACES_RETINAFACE_scales=[0.25]_nms=0.4/imgs_112x112/train/all_parts"
     }
+
+    # suffix=".png"    # for "rawimgs112x112", "seq_rawimgs112x112"
+    suffix=".npy"      # for "imagebind" and other pre extracted features
 
     for encoder, path in encoding_paths.items():
         output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}.npz")
         print(f"Processing {encoder} from {path}...")    
-        aggregate_sequence_imgs_and_save_npz(path, output_path, suffix=".png", sequence_size=args.sequence_size)
+        if suffix == ".png" or suffix == ".jpg" or suffix == ".jpeg":
+            aggregate_sequence_imgs_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size)
+        elif suffix == ".npy":
+            aggregate_sequence_features_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size)
         print(f"Saved to {output_path}\n")
 
 if __name__ == "__main__":
