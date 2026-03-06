@@ -1,4 +1,4 @@
-import os
+import os, sys
 import json
 from collections import Counter
 
@@ -14,6 +14,7 @@ from model.model import ConfigurableLinearNN, Backbone_with_ConfigurableLinearNN
 from model.iresnet_1d import iresnet18_1d, iresnet50_1d
 from model.iresnet_2d import get_model
 from model.resnet_lstm import ResNetLSTM
+from model.lstm import SequenceLSTM
 from model.post_process import get_top_2_predictions, probs2dict
 from trainer.trainer import Trainer
 from utils.create_soft_labels import create_labels
@@ -51,19 +52,23 @@ hparams = {
 # data_folder = "/home/tim/Work/quantum/data/blemore/"
 data_folder = "/home/pbqv20/BlEmoRe_backup"
 
+
+# train_metadata_path = os.path.join(data_folder, "train_metadata_balanced.csv")
 train_metadata_path = os.path.join(data_folder, "train_metadata.csv")
 test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
+
 
 encoding_paths = {
     # vision
     # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
     # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
     # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
+    "seq_imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=32.npz"),
     # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
     # "videoswintransformer": os.path.join(data_folder, "encoded_videos/static_data/videoswintransformer_static_features.npz"),
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
     # "rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/rawimgs112x112_STACK_features_subsampling=5.npz"),
-    "seq_rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_rawimgs112x112_SEQUENCE_features_sequence=32.npz"),
+    # "seq_rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_rawimgs112x112_SEQUENCE_features_sequence=32.npz"),
 
     # audio
     # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
@@ -103,6 +108,12 @@ def select_model(model_type, input_dim, output_dim):
         backbone = ResNetLSTM(hidden_size=hidden_size, num_layers=2)
         class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=hidden_size, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
         return class_model
+    elif model_type == "lstm":
+        hidden_size = 512
+        num_layers = 2
+        backbone = SequenceLSTM(input_size=input_dim, hidden_size=hidden_size, num_layers=num_layers)
+        class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=hidden_size, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
+        return class_model
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -111,7 +122,8 @@ def train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix)
     train_loader = DataLoader(train_dataset, batch_size=hparams["batch_size"], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=hparams["batch_size"], shuffle=False)
 
-    model = select_model(model_type, train_dataset.input_dim, train_dataset.output_dim)
+    # model = select_model(model_type, train_dataset.input_dim, train_dataset.output_dim)
+    model = select_model(model_type, train_dataset.X.shape[-1], train_dataset.output_dim)
     optimizer = torch.optim.Adam(model.parameters(), lr=hparams["learning_rate"], weight_decay=hparams["weight_decay"])
     model.to(device)
 
@@ -273,8 +285,9 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
     # vision_encoders = ["imagebind"]
+    vision_encoders = ["seq_imagebind"]
     # vision_encoders = ["rawimgs112x112"]
-    vision_encoders = ["seq_rawimgs112x112"]
+    # vision_encoders = ["seq_rawimgs112x112"]
 
     # audio_encoders = ["wavlm", "hubert"]
     audio_encoders = []
@@ -287,7 +300,8 @@ def main(do_val=True, do_test=False, args=None):
     # model_types = ["Linear", "MLP_256", "MLP_512"]
     # model_types = ["resnet18_1d"]
     # model_types = ["resnet18_2d"]
-    model_types = ["r50_lstm"]
+    # model_types = ["r50_lstm"]
+    model_types = ["lstm"]
 
     if do_val:
         train_df = pd.read_csv(train_metadata_path)
