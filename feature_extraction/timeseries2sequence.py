@@ -8,7 +8,7 @@ import cv2
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sequence-size', type=int, default=16)
+    parser.add_argument('--sequence-size', type=int, default=32)
     args = parser.parse_args()
     return args
 
@@ -133,6 +133,9 @@ def aggregate_sequence_features_and_save_npz(source_dir, output_path, suffix=".n
 
     X = np.stack(all_features)
     filenames = np.array(all_filenames)
+
+    print("Normalizing features")
+    X = (((X - X.min()) / X.max()) - 0.5) / 0.5
 
     np.savez(output_path, X=X, filenames=filenames)
     print(f"Saved: {output_path} (X shape: {X.shape}, {len(filenames)} filenames)")
