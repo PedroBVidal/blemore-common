@@ -61,14 +61,19 @@ test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
 encoding_paths = {
     # vision
     # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
-    # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
+    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
     # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
-    "seq_imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=32.npz"),
+    "seq_imagebind_sequence=32_padding=False":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=32_padding=False.npz"),
+    "seq_imagebind_sequence=64_padding=True":   os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=64_padding=True.npz"),
+    "seq_imagebind_sequence=128_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=128_padding=True.npz"),
+    "seq_imagebind_sequence=256_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=256_padding=True.npz"),
+    "seq_imagebind_sequence=512_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=512_padding=True.npz"),
+    "seq_imagebind_sequence=1024_padding=True": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=1024_padding=True.npz"),
     # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
     # "videoswintransformer": os.path.join(data_folder, "encoded_videos/static_data/videoswintransformer_static_features.npz"),
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
-    # "rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/rawimgs112x112_STACK_features_subsampling=5.npz"),
-    # "seq_rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_rawimgs112x112_SEQUENCE_features_sequence=32.npz"),
+    "rawimgs112x112":     os.path.join(data_folder, "feat/pre_extracted_train_data/rawimgs112x112_STACK_features_subsampling=5.npz"),
+    "seq_rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_rawimgs112x112_SEQUENCE_features_sequence=32.npz"),
 
     # audio
     # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
@@ -285,7 +290,12 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
     # vision_encoders = ["imagebind"]
-    vision_encoders = ["seq_imagebind"]
+    # vision_encoders = ["seq_imagebind_sequence=32_padding=False"]
+    # vision_encoders = ["seq_imagebind_sequence=64_padding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=128_padding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=256_padding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=512_padding=True"]
+    vision_encoders = ["seq_imagebind_sequence=1024_padding=True"]
     # vision_encoders = ["rawimgs112x112"]
     # vision_encoders = ["seq_rawimgs112x112"]
 
