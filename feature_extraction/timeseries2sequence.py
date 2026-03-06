@@ -8,7 +8,8 @@ import cv2
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sequence-size', type=int, default=32)
+    parser.add_argument('--sequence-size', type=int, default=32)    # --sequence-size <= 0 means ALL FRAMES
+    parser.add_argument('--padding', action="store_true")
     args = parser.parse_args()
     return args
 
@@ -28,7 +29,7 @@ def get_imediate_subdirs_paths(source_dir):
     return subdirs
 
 
-def get_files_names(subdir_path, suffix=".png", sequence_size=16):   # sequence_size <= 0 means ALL FILES
+def get_files_names(subdir_path, suffix=".png", sequence_size=32):   # sequence_size <= 0 means ALL FILES
     files_tmp = [
         f for f in os.listdir(subdir_path) 
         if os.path.isfile(os.path.join(subdir_path, f)) and f.endswith(suffix)
@@ -56,7 +57,7 @@ def load_normalize_transpose_img(img_path):
     return img.astype(np.float32)
 
 
-def aggregate_sequence_imgs_and_save_npz(source_dir, output_path, suffix=".png", sequence_size=16):
+def aggregate_sequence_imgs_and_save_npz(source_dir, output_path, suffix=".png", sequence_size=32):
     all_subdirs_videos_paths = get_imediate_subdirs_paths(source_dir)
     # print('all_subdirs_videos_paths:', all_subdirs_videos_paths)
     files_first_dir = get_files_names(all_subdirs_videos_paths[0], suffix, sequence_size)
@@ -98,7 +99,7 @@ def aggregate_sequence_imgs_and_save_npz(source_dir, output_path, suffix=".png",
 
 
 
-def aggregate_sequence_features_and_save_npz(source_dir, output_path, suffix=".npy", sequence_size=16):
+def aggregate_sequence_features_and_save_npz(source_dir, output_path, suffix=".npy", sequence_size=32, padding=False):
     all_features = []
     all_filenames = []
 
@@ -112,6 +113,11 @@ def aggregate_sequence_features_and_save_npz(source_dir, output_path, suffix=".n
         if x.ndim != 2:
             print(f"Skipping {fname}: shape {x.shape}")
             continue
+
+        if len(x) < sequence_size and padding:
+            pad_data = np.expand_dims(x[-1,:], axis=0)
+            pad_data = np.repeat(pad_data, sequence_size-len(x), axis=0)
+            x = np.vstack([x, pad_data])
 
         assert len(x) >= sequence_size, f"Error, len(x) ({len(x)}) < sequence_size ({sequence_size})"
         indices_to_select = np.linspace(0, len(x)-1, sequence_size, dtype=int)
@@ -173,12 +179,13 @@ def main():
     suffix=".npy"      # for "imagebind" and other pre extracted features
 
     for encoder, path in encoding_paths.items():
-        output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}.npz")
         print(f"Processing {encoder} from {path}...")    
         if suffix == ".png" or suffix == ".jpg" or suffix == ".jpeg":
+            output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}.npz")
             aggregate_sequence_imgs_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size)
         elif suffix == ".npy":
-            aggregate_sequence_features_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size)
+            output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}_padding={args.padding}.npz")
+            aggregate_sequence_features_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size, padding=args.padding)
         print(f"Saved to {output_path}\n")
 
 if __name__ == "__main__":
