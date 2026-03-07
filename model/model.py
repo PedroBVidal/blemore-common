@@ -92,13 +92,21 @@ class Backbone_with_ConfigurableLinearNN(nn.Module):
 
     def forward(self, x, targets=None):
         backbone_embedd = self.backbone(x)
+        # Check for 'dead' embeddings
+        # We calculate the average magnitude of the vectors in this batch
+        avg_magnitude = torch.mean(torch.abs(backbone_embedd)).item()
+        if avg_magnitude < 1e-5:
+            print(f"⚠️ Warning: Embeddings are nearly zero (Mag: {avg_magnitude:.8f}). Check padding!")
+    
+
         # logits = self.fc(x)
         logits = self.fc(backbone_embedd)
-        probs = F.softmax(logits, dim=1)
+        log_probs= F.log_softmax(logits, dim=1)
+        probs = torch.exp(log_probs)
 
         loss = None
         if targets is not None:
-            log_probs = probs.clamp(min=1e-8).log()
+            #log_probs = probs.clamp(min=1e-8).log()
             loss = F.kl_div(log_probs, targets, reduction="batchmean")
 
         return probs, logits, loss

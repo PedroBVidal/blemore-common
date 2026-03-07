@@ -43,7 +43,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 hparams = {
     # "batch_size": 32,
     "batch_size": 128,
-    "learning_rate": 5e-6,
+    #"learning_rate": 5e-6,
+    'learning_rate': 1e-4,
     # "learning_rate": 1e-7,
     "num_epochs": 400,
     "weight_decay": 1e-3,
@@ -61,8 +62,8 @@ test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
 encoding_paths = {
     # vision
     # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
-    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
-    # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
+    #"imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
+    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
     "seq_imagebind_sequence=32_padding=False":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=32_padding=False.npz"),
     "seq_imagebind_sequence=64_padding=True":   os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=64_padding=True.npz"),
     "seq_imagebind_sequence=128_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=128_padding=True.npz"),
@@ -293,14 +294,14 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
-    # vision_encoders = ["imagebind"]
-    # vision_encoders = ["seq_imagebind_sequence=32_padding=False"]
-    # vision_encoders = ["seq_imagebind_sequence=64_padding=True"]
+    vision_encoders = ["imagebind"]
+    #vision_encoders = ["seq_imagebind_sequence=32_padding=False"]
+    #vision_encoders = ["seq_imagebind_sequence=64_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=128_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=256_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=512_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=1024_padding=True"]
-    vision_encoders = ["seq_imagebind_sequence=256_innerpadding=True"]
+    #vision_encoders = ["seq_imagebind_sequence=256_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=512_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=1024_innerpadding=True"]
     # vision_encoders = ["rawimgs112x112"]
@@ -318,7 +319,8 @@ def main(do_val=True, do_test=False, args=None):
     # model_types = ["resnet18_1d"]
     # model_types = ["resnet18_2d"]
     # model_types = ["r50_lstm"]
-    model_types = ["lstm"]
+    model_types = ["MLP_512","r50_lstm"]
+    #model_types = ["lstm"]
 
     if do_val:
         train_df = pd.read_csv(train_metadata_path)
