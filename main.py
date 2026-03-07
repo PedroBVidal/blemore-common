@@ -42,7 +42,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 hparams = {
     # "batch_size": 32,
-    "batch_size": 8,
+    "batch_size": 128,
     "learning_rate": 5e-6,
     # "learning_rate": 1e-7,
     "num_epochs": 400,
@@ -69,6 +69,10 @@ encoding_paths = {
     "seq_imagebind_sequence=256_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=256_padding=True.npz"),
     "seq_imagebind_sequence=512_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=512_padding=True.npz"),
     "seq_imagebind_sequence=1024_padding=True": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=1024_padding=True.npz"),
+    "seq_imagebind_sequence=256_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=256_innerpadding=True.npz"),
+    "seq_imagebind_sequence=512_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=512_innerpadding=True.npz"),
+    "seq_imagebind_sequence=1024_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=1024_innerpadding=True.npz"),
+    
     # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
     # "videoswintransformer": os.path.join(data_folder, "encoded_videos/static_data/videoswintransformer_static_features.npz"),
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
@@ -295,7 +299,10 @@ def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["seq_imagebind_sequence=128_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=256_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=512_padding=True"]
-    vision_encoders = ["seq_imagebind_sequence=1024_padding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=1024_padding=True"]
+    vision_encoders = ["seq_imagebind_sequence=256_innerpadding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=512_innerpadding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=1024_innerpadding=True"]
     # vision_encoders = ["rawimgs112x112"]
     # vision_encoders = ["seq_rawimgs112x112"]
 
