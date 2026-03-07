@@ -1,0 +1,82 @@
+import os
+import numpy as np
+from tqdm import tqdm
+
+def aggregate_and_save_npz(source_dir, output_path, suffix=".npy"):
+    all_features = []
+    all_filenames = []
+
+    for fname in tqdm(os.listdir(source_dir)):
+        if not fname.endswith(suffix):
+            continue
+
+        path = os.path.join(source_dir, fname)
+        try:
+            x = np.load(path)
+            x = np.squeeze(x)
+            if x.ndim != 2:
+                print(f"Skipping {fname}: shape {x.shape}")
+                continue
+
+            # agg = np.concatenate([
+            #     x.mean(axis=0),
+            #     x.std(axis=0),
+            #     np.percentile(x, 10, axis=0),
+            #     np.percentile(x, 25, axis=0),
+            #     np.percentile(x, 50, axis=0),  # median
+            #     np.percentile(x, 75, axis=0),
+            #     np.percentile(x, 90, axis=0),
+            # ])
+            # agg = x[int(len(x)/2),:]    # middle frame of the video (JUST DIMENSION TEST)
+            agg = x
+
+            all_features.append(agg)
+            # all_filenames.append(fname.replace(suffix, ""))
+            all_filenames.extend([fname.replace(suffix, "")] * len(agg))
+
+        except Exception as e:
+            print(f"Failed: {fname} — {e}")
+
+    # X = np.stack(all_features)
+    # filenames = np.array(all_filenames)
+    X = np.vstack(all_features)
+    filenames = np.array(all_filenames)
+
+    X = ((X / np.max(X)) - 0.5) / 0.5     # normalize data to range [-1, 1]
+
+    np.savez(output_path, X=X, filenames=filenames)
+    print(f"Saved: {output_path} (X shape: {X.shape}, {len(filenames)} filenames)")
+
+
+import os
+
+def main():
+    # base_static_dir = "/home/tim/Work/quantum/data/blemore/encoded_videos/static_data"
+    base_static_dir = "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data"
+
+    # os.makedirs(base_static_dir, exist_ok=True)
+
+    encoding_paths = {
+        # "openface": "/home/tim/Work/quantum/data/blemore/encoded_videos/openface_npy/",
+        # "imagebind": "/home/tim/Work/quantum/data/blemore/encoded_videos/ImageBind/",
+        # "clip": "/home/tim/Work/quantum/data/blemore/encoded_videos/CLIP_npy/",
+        # "dinov2": "/home/tim/Work/quantum/data/blemore/encoded_videos/dynamic_data/DINOv2_first_component/",
+        # "videoswintransformer": "/home/tim/Work/quantum/data/blemore/encoded_videos/VideoSwinTransformer/",
+        # "videomae": "/home/tim/Work/quantum/data/blemore/encoded_videos/VideoMAEv2_reshaped/",
+        # "hubert": "/media/user/Seagate Hub/mixed_emotion_challenge/audio_encodings/hubert_large/",
+        # "wavlm": "/media/user/Seagate Hub/mixed_emotion_challenge/audio_encodings/wavlm_large/",
+        # "hicmae": "/home/tim/Work/quantum/data/blemore/encoded_videos/original_encodings/HiCMAE"
+
+        #"imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
+        #"videomae":  "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
+        "emotionclip": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/emotion_clip_full_data/"
+    }
+
+    for encoder, path in encoding_paths.items():
+        output_path = os.path.join(base_static_dir, f"{encoder}_STACK_features.npz")
+        print(f"Processing {encoder} from {path}...")
+        aggregate_and_save_npz(path, output_path, suffix=".npy")
+        print(f"Saved to {output_path}\n")
+
+if __name__ == "__main__":
+    main()

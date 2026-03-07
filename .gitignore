@@ -1,0 +1,120 @@
+visualizations/projector_logs_imagebind
+visualizations/projector_logs_imagebind_fea_ang
+visualizations/projector_logs_imagebind_hap_sad
+visualizations/projector_logs_videomae_hap_sad
+
+
+projector_visualization
+
+*.json
+*.csv
+*.npz
+*.pt
+*.zip
+
+!data/submission_template.json
+!data/submission_template_codabench.zip
+
+sandbox/inspect.ipynb
+sandbox
+sandbox/torch2npy.py
+
+sandbox/fiddle.py
+sandbox/fiddle2.py
+
+checkpoints
+
+runs
+
+# Python general
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+.env/
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyCharm specific
+.idea/
+*.iml
+*.ipr
+*.iws
+.idea_modules/
+
+# Logs
+*.log
+
+# macOS specific
+.DS_Store
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+
+# Byte-compiled Python / IPython
+*.dll
+*.pyd
+
+data/human_eval
+
+# Testing
+.tox/
+.coverage
+*.cover
+.hypothesis/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# System files
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.pid
+
+# Coverage reports
+htmlcov/
+
+# Packages
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+*.manifest
+*.spec
+pip-wheel-metadata/
+__pypackages__/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Bandit
+.bandit/
+
+# Sphinx documentation
+docs/_build/
+
+#emo clip v2 test
+feature_extraction/video_encoding/EmotionCLIP-V2/
+nohup.out
