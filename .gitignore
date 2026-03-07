@@ -114,7 +114,3 @@ dmypy.json
 
 # Sphinx documentation
 docs/_build/
-
-#emo clip v2 test
-feature_extraction/video_encoding/EmotionCLIP-V2/
-nohup.out

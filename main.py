@@ -1,7 +1,8 @@
-import os
+import os, sys
 import json
 from collections import Counter
 
+import argparse
 import random
 import numpy as np
 import pandas as pd
@@ -11,6 +12,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 from model.model import ConfigurableLinearNN, Backbone_with_ConfigurableLinearNN
 from model.iresnet_1d import iresnet18_1d, iresnet50_1d
+from model.iresnet_2d import get_model
+from model.resnet_lstm import ResNetLSTM
+from model.lstm import SequenceLSTM
 from model.post_process import get_top_2_predictions, probs2dict
 from trainer.trainer import Trainer
 from utils.create_soft_labels import create_labels
@@ -26,34 +30,54 @@ torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--annotation', type=str, default='', help='Information to be added to output folder')
+    args = parser.parse_args()
+    return args
+
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 hparams = {
     # "batch_size": 32,
     "batch_size": 128,
-    # "learning_rate": 5e-6,
-    "learning_rate": 5e-8,
-    "num_epochs": 200,
+    "learning_rate": 5e-6,
+    # "learning_rate": 1e-7,
+    "num_epochs": 400,
     "weight_decay": 1e-3,
 }
 
 # data_folder = "/home/tim/Work/quantum/data/blemore/"
 data_folder = "/home/pbqv20/BlEmoRe_backup"
 
+
+# train_metadata_path = os.path.join(data_folder, "train_metadata_balanced.csv")
 train_metadata_path = os.path.join(data_folder, "train_metadata.csv")
 test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
+
 
 encoding_paths = {
     # vision
     # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
-    # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
-
-    "emotionclip": os.path.join(data_folder, "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/emotionclip_STACK_features.npz"),
-    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
+    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
+    # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
+    "seq_imagebind_sequence=32_padding=False":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=32_padding=False.npz"),
+    "seq_imagebind_sequence=64_padding=True":   os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=64_padding=True.npz"),
+    "seq_imagebind_sequence=128_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=128_padding=True.npz"),
+    "seq_imagebind_sequence=256_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=256_padding=True.npz"),
+    "seq_imagebind_sequence=512_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=512_padding=True.npz"),
+    "seq_imagebind_sequence=1024_padding=True": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=1024_padding=True.npz"),
+    "seq_imagebind_sequence=256_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=256_innerpadding=True.npz"),
+    "seq_imagebind_sequence=512_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=512_innerpadding=True.npz"),
+    "seq_imagebind_sequence=1024_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=1024_innerpadding=True.npz"),
+    
     # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
-    # "videoswintransformer": os.path.join(data_folder,
-    #                                      "encoded_videos/static_data/videoswintransformer_static_features.npz"),
+    # "videoswintransformer": os.path.join(data_folder, "encoded_videos/static_data/videoswintransformer_static_features.npz"),
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
+    "rawimgs112x112":     os.path.join(data_folder, "feat/pre_extracted_train_data/rawimgs112x112_STACK_features_subsampling=5.npz"),
+    "seq_rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_rawimgs112x112_SEQUENCE_features_sequence=32.npz"),
 
     # audio
     # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
@@ -81,6 +105,24 @@ def select_model(model_type, input_dim, output_dim):
         backbone = iresnet18_1d(input_channels=1, num_features=128)
         class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=128, output_dim=output_dim, model_type= model_type, n_layers=0)
         return class_model
+    elif model_type == "resnet18_2d":
+        network = "r18"
+        fp16 = True
+        num_features=512
+        backbone = get_model(network, dropout=0.0, fp16=fp16, num_features=num_features)
+        class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=num_features, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
+        return class_model
+    elif model_type == "r50_lstm":
+        hidden_size = 512
+        backbone = ResNetLSTM(hidden_size=hidden_size, num_layers=2)
+        class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=hidden_size, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
+        return class_model
+    elif model_type == "lstm":
+        hidden_size = 512
+        num_layers = 2
+        backbone = SequenceLSTM(input_size=input_dim, hidden_size=hidden_size, num_layers=num_layers)
+        class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=hidden_size, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
+        return class_model
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -89,7 +131,8 @@ def train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix)
     train_loader = DataLoader(train_dataset, batch_size=hparams["batch_size"], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=hparams["batch_size"], shuffle=False)
 
-    model = select_model(model_type, train_dataset.input_dim, train_dataset.output_dim)
+    # model = select_model(model_type, train_dataset.input_dim, train_dataset.output_dim)
+    model = select_model(model_type, train_dataset.X.shape[-1], train_dataset.output_dim)
     optimizer = torch.optim.Adam(model.parameters(), lr=hparams["learning_rate"], weight_decay=hparams["weight_decay"])
     model.to(device)
 
@@ -143,8 +186,9 @@ def evaluate_model(model, test_loader, alpha, beta, encoder):
 
     return acc_presence, acc_salience
 
-def run_validation(train_df, train_labels, encoders, model_types):
-    folds = [0, 1, 2, 3, 4]
+def run_validation(train_df, train_labels, encoders, model_types, args):
+    # folds = [0, 1, 2, 3, 4]
+    folds = [0]
 
     summary_rows = []
     for encoder in encoders:
@@ -158,6 +202,8 @@ def run_validation(train_df, train_labels, encoders, model_types):
                 train_dataset, val_dataset = prepare_split_2d(train_files, train_labels_fold, val_files, val_labels, encoding_path)
 
                 log_dir = f"runs/{encoder}_{model_type}_fold{fold_id}"
+                if args.annotation:
+                    log_dir += f'_annotation={args.annotation}'
                 save_prefix = f"{encoder}_{model_type}_fold{fold_id}"
                 best_epoch, _ = train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix)
 
@@ -245,9 +291,20 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
     print(test_summary_df.groupby(["encoder", "model"])[["test_acc_presence", "test_acc_salience"]].mean())
 
 
-def main(do_val=True, do_test=False):
+def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
-    vision_encoders = ["emotionclip"]
+    # vision_encoders = ["imagebind"]
+    # vision_encoders = ["seq_imagebind_sequence=32_padding=False"]
+    # vision_encoders = ["seq_imagebind_sequence=64_padding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=128_padding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=256_padding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=512_padding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=1024_padding=True"]
+    vision_encoders = ["seq_imagebind_sequence=256_innerpadding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=512_innerpadding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=1024_innerpadding=True"]
+    # vision_encoders = ["rawimgs112x112"]
+    # vision_encoders = ["seq_rawimgs112x112"]
 
     # audio_encoders = ["wavlm", "hubert"]
     audio_encoders = []
@@ -258,15 +315,16 @@ def main(do_val=True, do_test=False):
     encoders = vision_encoders + audio_encoders + encoder_fusions
 
     # model_types = ["Linear", "MLP_256", "MLP_512"]
-    #model_types = ["resnet18_1d"]
-    model_types = ["resnet18_1d"]
-
+    # model_types = ["resnet18_1d"]
+    # model_types = ["resnet18_2d"]
+    # model_types = ["r50_lstm"]
+    model_types = ["lstm"]
 
     if do_val:
         train_df = pd.read_csv(train_metadata_path)
         train_labels = create_labels(train_df.to_dict(orient="records"))
 
-        run_validation(train_df, train_labels, encoders, model_types)
+        run_validation(train_df, train_labels, encoders, model_types, args)
 
     if do_test:
         test_df = pd.read_csv(test_metadata_path)
@@ -275,4 +333,5 @@ def main(do_val=True, do_test=False):
         run_test(train_df, train_labels, test_df, test_labels, encoders, model_types, use_best_model_from_val=False)
 
 if __name__ == "__main__":
-    main(do_val=True, do_test=False)
+    args = parse_args()
+    main(do_val=True, do_test=False, args=args)
