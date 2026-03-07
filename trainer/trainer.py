@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 import os
-import time
 
 from model.post_process import grid_search_thresholds
 from utils.subsample_utils import aggregate_subsamples
@@ -31,21 +30,18 @@ class Trainer(object):
 
         for batch_idx, (data, target) in enumerate(self.data_loader):
             data, target = data.to(self.device), target.to(self.device)
-            if len(data.shape) == 2:
-                data = torch.unsqueeze(data, 1)
-            print(f'    train_epoch()    batch_idx: {batch_idx}/{len(self.data_loader)}    data.shape: {data.shape}    target.shape: {target.shape}', end='\r')
+
             self.optimizer.zero_grad()
             probs, logits, loss = self.model(data, target)
             loss.backward()
             self.optimizer.step()
             total_loss += loss.item()
-        print()
 
         avg_loss = total_loss / len(self.data_loader)
         return avg_loss
 
     def validate(self):
-        print("    Validating model...")
+        print("\nValidating model...")
 
         self.model.eval()
         total_loss = 0
@@ -53,16 +49,12 @@ class Trainer(object):
         all_logits = []
 
         with torch.no_grad():
-            for batch_idx, (data, target) in enumerate(self.valid_data_loader):
+            for data, target in self.valid_data_loader:
                 data, target = data.to(self.device), target.to(self.device)
-                if len(data.shape) == 2:
-                    data = torch.unsqueeze(data, 1)
-                print(f'    validate()    batch_idx: {batch_idx}/{len(self.valid_data_loader)}    data.shape: {data.shape}    target.shape: {target.shape}', end='\r')
                 probs, logits, loss = self.model(data, target)
                 total_loss += loss.item()
                 all_probs.append(probs.cpu().numpy())
                 all_logits.append(logits.cpu().numpy())
-            print()
 
         all_probs = np.concatenate(all_probs, axis=0)
         all_logits = np.concatenate(all_logits, axis=0)
@@ -71,7 +63,6 @@ class Trainer(object):
         if self.subsample_aggregation:
             val_filenames, all_probs = aggregate_subsamples(val_filenames, all_logits)
 
-        print(f'    validate()    doing grid search of thresholds...')
         ret = grid_search_thresholds(val_filenames, all_probs)
         avg_loss = total_loss / len(self.valid_data_loader)
         ret["val_loss"] = avg_loss
@@ -81,12 +72,9 @@ class Trainer(object):
         best_epoch_stats = None
         best_model_path = None
 
-        total_time = 0.0
         for epoch in range(self.epochs):
-            epoch_start_time = time.time()
-            print(f"Epoch [{epoch + 1}/{self.epochs}]")
             train_loss = self.train_epoch()
-            print(f"    Train Loss: {train_loss:.4f}")
+            print(f"Epoch [{epoch + 1}/{self.epochs}], Train Loss: {train_loss:.4f}")
 
             if writer:
                 writer.add_scalar("Loss/train", train_loss, epoch)
@@ -95,7 +83,7 @@ class Trainer(object):
                 stats = self.validate()
                 val_score = 0.5 * stats['acc_presence'] + 0.5 * stats['acc_salience']  # scoring metric
 
-                print(f"    Epoch [{epoch + 1}/{self.epochs}], "
+                print(f"Epoch [{epoch + 1}/{self.epochs}], "
                       f"Validation Loss: {stats['val_loss']:.4f}, "
                       f"Best Alpha: {stats['alpha']:.4f}, "
                       f"Best Beta: {stats['beta']:.4f}, "
@@ -133,15 +121,5 @@ class Trainer(object):
                         "best_acc_presence": stats['acc_presence'],
                         "best_acc_salience": stats['acc_salience'],
                     }
-            
-            epoch_end_time = time.time()
-            epoch_elapsed_time = epoch_end_time-epoch_start_time
-            estimated_time = (self.epochs - epoch+1) * epoch_elapsed_time
-            total_time += epoch_elapsed_time
-            print()
-            print(f"    Epoch elapsed time: {epoch_elapsed_time:.2f} sec    {epoch_elapsed_time/60:.2f} min    {epoch_elapsed_time/3600:.2f} hour")
-            print(f"    Estimated time: {estimated_time:.2f} sec    {estimated_time/60:.2f} min    {estimated_time/3600:.2f} hour")
-            print(f"    Total time: {total_time:.2f} sec    {total_time/60:.2f} min    {total_time/3600:.2f} hour")
-            print('-------------')
 
         return best_epoch_stats, best_model_path

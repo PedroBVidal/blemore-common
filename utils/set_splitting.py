@@ -19,41 +19,25 @@ def get_validation_split(df, labels, fold_id):
 
 
 def prepare_split_2d(train_files, train_labels, val_files, val_labels, filepath):
-    print(f"Loading train/val data '{filepath}'")
     data = np.load(filepath)
     X = data["X"]
     filenames = data["filenames"]
-    print(f"    Done    (X.shape: {X.shape},    filenames.shape: {filenames.shape})")
 
-    train_frames = np.concatenate([filenames[filenames==f] for f in train_files], axis=0)
-    val_frames   = np.concatenate([filenames[filenames==f] for f in val_files], axis=0)
-    
     # Map filenames to indices
-    # name_to_idx = {name: i for i, name in enumerate(filenames)}
-    # train_idx = [name_to_idx[f] for f in train_files]
-    # val_idx = [name_to_idx[f] for f in val_files]
-    train_idx = np.concatenate([np.where(filenames==f)[0] for f in train_files], axis=0)
-    val_idx   = np.concatenate([np.where(filenames==f)[0] for f in val_files], axis=0)
-
-    train_labels_frames = np.vstack([[train_labels[i]] * int(np.sum(filenames==file)) for i, file in enumerate(train_files)])
-    val_labels_frames   = np.vstack([[val_labels[i]]   * int(np.sum(filenames==file)) for i, file in enumerate(val_files)])
+    name_to_idx = {name: i for i, name in enumerate(filenames)}
+    train_idx = [name_to_idx[f] for f in train_files]
+    val_idx = [name_to_idx[f] for f in val_files]
 
     # Subset and scale
-    print(f"Splitting train data")
     X_train = X[train_idx]
-    print(f"    X_train.shape: {X_train.shape}")
-    print(f"Splitting val data")
     X_val = X[val_idx]
-    print(f"    X_val.shape: {X_val.shape}")
 
-    if len(X_train.shape) <= 2:
-        print(f"Normalizing train/val data")
-        scaler = StandardScaler()
-        X_train = scaler.fit_transform(X_train)
-        X_val = scaler.transform(X_val)
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    X_val = scaler.transform(X_val)
 
-    train_dataset = D2Dataset(X=X_train, labels=train_labels_frames, filenames=train_frames)
-    val_dataset = D2Dataset(X=X_val, labels=val_labels_frames, filenames=val_frames)
+    train_dataset = D2Dataset(X=X_train, labels=train_labels, filenames=train_files)
+    val_dataset = D2Dataset(X=X_val, labels=val_labels, filenames=val_files)
 
     return train_dataset, val_dataset
 
