@@ -115,9 +115,13 @@ def aggregate_sequence_features_and_save_npz(source_dir, output_path, suffix=".n
             continue
 
         if len(x) < sequence_size and padding:
-            pad_data = np.expand_dims(x[-1,:], axis=0)
-            pad_data = np.repeat(pad_data, sequence_size-len(x), axis=0)
-            x = np.vstack([x, pad_data])
+            # pad_data = np.expand_dims(x[-1,:], axis=0)
+            # pad_data = np.repeat(pad_data, sequence_size-len(x), axis=0)
+            # x = np.vstack([x, pad_data])
+            repeats = np.full(len(x), sequence_size // len(x))
+            repeats[:sequence_size % len(x)] += 1
+            x = np.repeat(x, repeats, axis=0)
+            assert len(x) == sequence_size, f"Error, len(x) ({len(x)}) != sequence_size ({sequence_size}), maybe padding worked wrong"
 
         assert len(x) >= sequence_size, f"Error, len(x) ({len(x)}) < sequence_size ({sequence_size})"
         indices_to_select = np.linspace(0, len(x)-1, sequence_size, dtype=int)
@@ -184,7 +188,8 @@ def main():
             output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}.npz")
             aggregate_sequence_imgs_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size)
         elif suffix == ".npy":
-            output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}_padding={args.padding}.npz")
+            # output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}_padding={args.padding}.npz")
+            output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}_innerpadding={args.padding}.npz")
             aggregate_sequence_features_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size, padding=args.padding)
         print(f"Saved to {output_path}\n")
 
