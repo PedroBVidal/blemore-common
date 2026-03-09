@@ -36,7 +36,7 @@ class Attention(nn.Module):
 
 class LSTM_Attention(nn.Module):
     def __init__(self, input_size=2048, hidden_size=512, num_layers=2, dropout=0.0):
-        super(SequenceLSTM, self).__init__()
+        super(LSTM_Attention, self).__init__()
 
         self.lstm = nn.LSTM(
             input_size=input_size,
