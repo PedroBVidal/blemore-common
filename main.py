@@ -43,10 +43,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 hparams = {
     # "batch_size": 32,
     "batch_size": 128,
-    "learning_rate": 5e-6,
-    # "learning_rate": 1e-7,
+    # "learning_rate": 5e-6,
+    "learning_rate": 1e-7,
     "num_epochs": 400,
-    "weight_decay": 1e-3,
+    # "weight_decay": 1e-3,
+    "weight_decay": 1e-6,
 }
 
 # data_folder = "/home/tim/Work/quantum/data/blemore/"
@@ -63,12 +64,15 @@ encoding_paths = {
     # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
     "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
     # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
+    
     "seq_imagebind_sequence=32_padding=False":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=32_padding=False.npz"),
     "seq_imagebind_sequence=64_padding=True":   os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=64_padding=True.npz"),
     "seq_imagebind_sequence=128_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=128_padding=True.npz"),
     "seq_imagebind_sequence=256_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=256_padding=True.npz"),
     "seq_imagebind_sequence=512_padding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=512_padding=True.npz"),
     "seq_imagebind_sequence=1024_padding=True": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=1024_padding=True.npz"),
+    
+    "seq_imagebind_sequence=128_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=128_innerpadding=True.npz"),
     "seq_imagebind_sequence=256_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=256_innerpadding=True.npz"),
     "seq_imagebind_sequence=512_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=512_innerpadding=True.npz"),
     "seq_imagebind_sequence=1024_innerpadding=True":  os.path.join(data_folder, "feat/pre_extracted_train_data/seq_imagebind_SEQUENCE_features_sequence=1024_innerpadding=True.npz"),
@@ -123,6 +127,8 @@ def select_model(model_type, input_dim, output_dim):
         backbone = SequenceLSTM(input_size=input_dim, hidden_size=hidden_size, num_layers=num_layers)
         class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=hidden_size, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
         return class_model
+    # elif model_type == "lstm_att":
+    
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -300,7 +306,8 @@ def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["seq_imagebind_sequence=256_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=512_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=1024_padding=True"]
-    vision_encoders = ["seq_imagebind_sequence=256_innerpadding=True"]
+    vision_encoders = ["seq_imagebind_sequence=128_innerpadding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=256_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=512_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=1024_innerpadding=True"]
     # vision_encoders = ["rawimgs112x112"]
