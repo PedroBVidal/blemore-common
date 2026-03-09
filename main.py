@@ -14,7 +14,7 @@ from model.model import ConfigurableLinearNN, Backbone_with_ConfigurableLinearNN
 from model.iresnet_1d import iresnet18_1d, iresnet50_1d
 from model.iresnet_2d import get_model
 from model.resnet_lstm import ResNetLSTM
-from model.lstm import SequenceLSTM
+from model.lstm import SequenceLSTM, LSTM_Attention
 from model.post_process import get_top_2_predictions, probs2dict
 from trainer.trainer import Trainer
 from utils.create_soft_labels import create_labels
@@ -43,11 +43,11 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 hparams = {
     # "batch_size": 32,
     "batch_size": 128,
-    # "learning_rate": 5e-6,
-    "learning_rate": 1e-7,
+    "learning_rate": 5e-6,
+    # "learning_rate": 1e-7,
     "num_epochs": 400,
-    # "weight_decay": 1e-3,
-    "weight_decay": 1e-6,
+    "weight_decay": 1e-3,
+    # "weight_decay": 1e-6,
 }
 
 # data_folder = "/home/tim/Work/quantum/data/blemore/"
@@ -122,13 +122,21 @@ def select_model(model_type, input_dim, output_dim):
         class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=hidden_size, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
         return class_model
     elif model_type == "lstm":
-        hidden_size = 512
-        num_layers = 2
+        # hidden_size = 512
+        hidden_size = 4096
+        num_layers = 1
         backbone = SequenceLSTM(input_size=input_dim, hidden_size=hidden_size, num_layers=num_layers)
         class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=hidden_size, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
         return class_model
-    # elif model_type == "lstm_att":
-    
+    elif model_type == "lstm_att":
+        # hidden_size = 256
+        # hidden_size = 512
+        # hidden_size = 2048
+        hidden_size = 4096
+        num_layers = 1
+        backbone = LSTM_Attention(input_size=input_dim, hidden_size=hidden_size, num_layers=num_layers)
+        class_model = Backbone_with_ConfigurableLinearNN(backbone, input_dim=hidden_size, output_dim=output_dim, model_type= model_type, n_layers=1, hidden_dim=512)
+        return class_model
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -300,12 +308,14 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
     # vision_encoders = ["imagebind"]
+    
     # vision_encoders = ["seq_imagebind_sequence=32_padding=False"]
     # vision_encoders = ["seq_imagebind_sequence=64_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=128_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=256_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=512_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=1024_padding=True"]
+    
     vision_encoders = ["seq_imagebind_sequence=128_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=256_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=512_innerpadding=True"]
@@ -313,8 +323,10 @@ def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["rawimgs112x112"]
     # vision_encoders = ["seq_rawimgs112x112"]
 
+
     # audio_encoders = ["wavlm", "hubert"]
     audio_encoders = []
+
 
     # encoder_fusions = ["imagebind_wavlm", "imagebind_hubert", "videomae_wavlm", "videomae_hubert"]
     encoder_fusions = []
@@ -325,7 +337,8 @@ def main(do_val=True, do_test=False, args=None):
     # model_types = ["resnet18_1d"]
     # model_types = ["resnet18_2d"]
     # model_types = ["r50_lstm"]
-    model_types = ["lstm"]
+    # model_types = ["lstm"]
+    model_types = ["lstm_att"]
 
     if do_val:
         train_df = pd.read_csv(train_metadata_path)
