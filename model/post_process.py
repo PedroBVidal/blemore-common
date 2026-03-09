@@ -1,3 +1,5 @@
+from unittest import result
+
 import numpy as np
 from collections import Counter
 
@@ -43,15 +45,19 @@ def probs2dict(y_pred,
     Returns:
         Dict[str, List[Dict[str, float]]]: Formatted predictions per file
     """
+
     y_pred = np.copy(y_pred)
     result = {}
+    # The final JSON needs to start with this key
+    result = {"predictions": {}}
 
     for fname, vec in zip(filenames, y_pred):
+        json_fname = fname if fname.endswith(".mov") else f"{fname}.mov"
         pred_top_index = np.argmax(vec)  # Get the index of the highest probability
 
         if vec[pred_top_index] < presence_threshold:
             preds = [{"emotion": INDEX_TO_LABEL[pred_top_index], "salience": 100.0}]
-            result[fname] = preds
+            result["predictions"][json_fname] = preds
             continue
 
         vec[vec < presence_threshold] = 0  # mask low confidence
@@ -59,20 +65,22 @@ def probs2dict(y_pred,
 
         if len(nonzero) == 1:
             preds = [{"emotion": INDEX_TO_LABEL[nonzero[0]], "salience": 100.0}]
-            result[fname] = preds
+            result["predictions"][json_fname] = preds
             continue
-
+        
         if NEUTRAL_INDEX in nonzero:
-            if vec[nonzero[0]] >= vec[NEUTRAL_INDEX]:
-                # If neutral is present but has lower salience than the first emotion
-                preds = [{"emotion": INDEX_TO_LABEL[nonzero[0]], "salience": 100.0}]
+            if vec[pred_top_index] >= vec[NEUTRAL_INDEX]:
+                target = pred_top_index
             else:
-                # If neutral is present and has higher salience than the first emotion
-                preds = [{"emotion": INDEX_TO_LABEL[NEUTRAL_INDEX], "salience": 100.0}]
-            result[fname] = preds
+                target = NEUTRAL_INDEX
+            
+            preds = [{"emotion": INDEX_TO_LABEL[target], "salience": 100.0}]
+            result["predictions"][json_fname] = preds
             continue
 
-        i, j = nonzero
+        # Get top 2 indices sorted by probability
+        sorted_idx = np.argsort(vec)[::-1]
+        i, j = sorted_idx[0], sorted_idx[1]
         p1, p2 = vec[i], vec[j]
 
         if abs(p1 - p2) <= salience_threshold:
@@ -82,7 +90,7 @@ def probs2dict(y_pred,
         else:
             sal1, sal2 = 0.3, 0.7
 
-        result[fname] = [
+        result["predictions"][json_fname] = [
             {"emotion": INDEX_TO_LABEL[i], "salience": round(100 * sal1, 1)},
             {"emotion": INDEX_TO_LABEL[j], "salience": round(100 * sal2, 1)}
         ]
