@@ -4,12 +4,20 @@ from tqdm import tqdm
 import argparse
 import re
 import cv2
+import math
+
+import torch
+from torchvision.utils import make_grid, save_image
+import matplotlib.pyplot as plt
+
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--sequence-size', type=int, default=32)    # --sequence-size <= 0 means ALL FRAMES
-    parser.add_argument('--padding', action="store_true")
+    # parser.add_argument('--padding', action="store_true")
+    parser.add_argument('--padding', type=str, default="inner", choices=['inner', 'last', 'zeros'])
+    parser.add_argument('--save-visualization', action="store_true")
     args = parser.parse_args()
     return args
 
@@ -57,10 +65,25 @@ def load_normalize_transpose_img(img_path):
     return img.astype(np.float32)
 
 
-def aggregate_sequence_imgs_and_save_npz(source_dir, output_path, suffix=".png", sequence_size=32):
+def save_sequence_grid(sequence_tensor, title, filename="grid_output.png"):
+    grid_data = (sequence_tensor + 1.0) / 2.0
+    num_frames = grid_data.size(0)
+    nrow = math.ceil(math.sqrt(num_frames))
+    grid = make_grid(grid_data, nrow=nrow, padding=2)
+    
+    plt.figure(figsize=(12, 12))
+    plt.imshow(grid.permute(1, 2, 0).cpu().numpy())
+    plt.title(title, fontsize=20)
+    plt.axis('off')
+    
+    plt.savefig(filename, bbox_inches='tight', pad_inches=0.1)
+    plt.close()
+
+
+def aggregate_sequence_imgs_and_save_npz(args, source_dir, output_path, suffix=".png", sequence_size=32, padding="inner"):
     all_subdirs_videos_paths = get_imediate_subdirs_paths(source_dir)
     # print('all_subdirs_videos_paths:', all_subdirs_videos_paths)
-    files_first_dir = get_files_names(all_subdirs_videos_paths[0], suffix, sequence_size)
+    files_first_dir = get_files_names(all_subdirs_videos_paths[0], suffix, sequence_size=-1)
     img_first_frame = cv2.imread(os.path.join(all_subdirs_videos_paths[0], files_first_dir[0]))
     all_frames_array_shape = (len(all_subdirs_videos_paths), sequence_size, img_first_frame.shape[2], img_first_frame.shape[0], img_first_frame.shape[1])
     
@@ -69,29 +92,60 @@ def aggregate_sequence_imgs_and_save_npz(source_dir, output_path, suffix=".png",
     all_filenames = [None] * len(all_subdirs_videos_paths)
 
     for idx_subdir_video, subdir_video_path in enumerate(all_subdirs_videos_paths):
-        frames_filenames = get_files_names(subdir_video_path, suffix, sequence_size)
+        frames_filenames = get_files_names(subdir_video_path, suffix, sequence_size=-1)
         video_name = os.path.basename(subdir_video_path)
-        for idx_fname, fname in enumerate(frames_filenames):
+        
+        # make padding
+        if len(frames_filenames) < sequence_size:
+            num_missing = sequence_size - len(frames_filenames)
+            if padding == "inner":
+                seq_frames_filenames = []
+                for i in range(sequence_size):
+                    # Map the current index back to the original list scale
+                    idx = int(i * len(frames_filenames) / sequence_size)
+                    seq_frames_filenames.append(frames_filenames[idx])
+            elif padding == "last":
+                last_frame = frames_filenames[-1]
+                seq_frames_filenames = frames_filenames + [last_frame] * num_missing
+            elif padding == "zeros":
+                seq_frames_filenames = frames_filenames + [None] * num_missing
+        
+            assert len(seq_frames_filenames) == sequence_size
+        else:
+            seq_frames_filenames = get_files_names(subdir_video_path, suffix, sequence_size)
+
+        for idx_fname, fname in enumerate(seq_frames_filenames):
             print(f"video {idx_subdir_video}/{len(all_subdirs_videos_paths)} ({idx_subdir_video/len(all_subdirs_videos_paths)*100:.1f}%) '{video_name}'  - ",
                   f"frame {idx_fname}/{len(frames_filenames)}  - ",
                   f"sequence_size {sequence_size}", end='\r')
 
-            if not fname.endswith(suffix):
-                continue
-
-            path = os.path.join(subdir_video_path, fname)
-            try:
+            if isinstance(fname, str):
+                path = os.path.join(subdir_video_path, fname)
                 img_transp = load_normalize_transpose_img(path)
-                X[idx_subdir_video,idx_fname:] = img_transp
+            elif fname is None:
+                img_transp = np.zeros((3,112,112), dtype=np.float32)   # Add blank image if padding == "zeros"
 
-            except Exception as e:
-                print(f"Failed: {fname} — {e}")
+            X[idx_subdir_video,idx_fname:] = img_transp
 
         all_filenames[idx_subdir_video] = video_name
         print()
 
+        if args.save_visualization:
+            output_dirpath_visualizations = os.path.join(os.path.dirname(output_path), f"VISUALIZATIONS_SEQUENCES_{os.path.splitext(os.path.basename(output_path))[0]}")
+            output_visualization_video_fname = os.path.join(output_dirpath_visualizations, f"{video_name}_seq={sequence_size}-{len(frames_filenames)}.png")
+            seq_imgs = X[idx_subdir_video,:]
+            # print("seq_imgs.shape:", seq_imgs.shape)
+            print(f"    Saving grid: '{output_visualization_video_fname}'")
+            os.makedirs(output_dirpath_visualizations, exist_ok=True)
+            title = f"{video_name}    sequence_size: {sequence_size}/{len(frames_filenames)}"
+            save_sequence_grid(torch.tensor(seq_imgs), title, filename=output_visualization_video_fname)
+
+    sys.exit(0)
+
+
+
     filenames = np.array(all_filenames)
-    
+
     print(f"Saving all stacked data X {X.shape}: '{output_path}'")
     # np.savez(output_path, X=X, filenames=filenames)
     np.savez_compressed(output_path, X=X, filenames=filenames)
@@ -172,26 +226,27 @@ def main():
         # "hicmae": "/home/tim/Work/quantum/data/blemore/encoded_videos/original_encodings/HiCMAE"
 
         # "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
-        "seq_imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
+        # "seq_imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
         # "videomae":  "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
 
         # "rawimgs112x112": "/home/pbqv20/BlEmoRe_backup/data_frames_DETECTED_FACES_RETINAFACE_scales=[0.25]_nms=0.4/imgs_112x112/train/all_parts"
-        # "seq_rawimgs112x112": "/home/pbqv20/BlEmoRe_backup/data_frames_DETECTED_FACES_RETINAFACE_scales=[0.25]_nms=0.4/imgs_112x112/train/all_parts"
+        "seq_rawimgs112x112": "/home/pbqv20/BlEmoRe_backup/data_frames_DETECTED_FACES_RETINAFACE_scales=[0.25]_nms=0.4/imgs_112x112/train/all_parts"
     }
 
-    # suffix=".png"    # for "rawimgs112x112", "seq_rawimgs112x112"
-    suffix=".npy"      # for "imagebind" and other pre extracted features
+    suffix=".png"      # for "rawimgs112x112", "seq_rawimgs112x112"
+    # suffix=".npy"    # for "imagebind" and other pre extracted features
 
     for encoder, path in encoding_paths.items():
         print(f"Processing {encoder} from {path}...")    
         if suffix == ".png" or suffix == ".jpg" or suffix == ".jpeg":
-            output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}.npz")
-            aggregate_sequence_imgs_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size)
+            output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}_padding={args.padding}.npz")
+            aggregate_sequence_imgs_and_save_npz(args, path, output_path, suffix=suffix, sequence_size=args.sequence_size, padding=args.padding)
         elif suffix == ".npy":
             # output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}_padding={args.padding}.npz")
             output_path = os.path.join(base_static_dir, f"{encoder}_SEQUENCE_features_sequence={args.sequence_size}_innerpadding={args.padding}.npz")
             aggregate_sequence_features_and_save_npz(path, output_path, suffix=suffix, sequence_size=args.sequence_size, padding=args.padding)
         print(f"Saved to {output_path}\n")
+
 
 if __name__ == "__main__":
     main()
