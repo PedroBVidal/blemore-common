@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('--sequence-size', type=int, default=32)    # --sequence-size <= 0 means ALL FRAMES
     # parser.add_argument('--padding', action="store_true")
     parser.add_argument('--padding', type=str, default="inner", choices=['inner', 'last', 'zeros'])
-    parser.add_argument('--save-visualization', action="store_true")
+    parser.add_argument('--save-visualizations', action="store_true")
     args = parser.parse_args()
     return args
 
@@ -130,7 +130,7 @@ def aggregate_sequence_imgs_and_save_npz(args, source_dir, output_path, suffix="
         all_filenames[idx_subdir_video] = video_name
         print()
 
-        if args.save_visualization:
+        if args.save_visualizations:
             output_dirpath_visualizations = os.path.join(os.path.dirname(output_path), f"VISUALIZATIONS_SEQUENCES_{os.path.splitext(os.path.basename(output_path))[0]}")
             output_visualization_video_fname = os.path.join(output_dirpath_visualizations, f"{video_name}_seq={sequence_size}-{len(frames_filenames)}.png")
             seq_imgs = X[idx_subdir_video,:]
@@ -139,10 +139,6 @@ def aggregate_sequence_imgs_and_save_npz(args, source_dir, output_path, suffix="
             os.makedirs(output_dirpath_visualizations, exist_ok=True)
             title = f"{video_name}    sequence_size: {sequence_size}/{len(frames_filenames)}"
             save_sequence_grid(torch.tensor(seq_imgs), title, filename=output_visualization_video_fname)
-
-    sys.exit(0)
-
-
 
     filenames = np.array(all_filenames)
 
