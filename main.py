@@ -37,7 +37,8 @@ def parse_args():
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 hparams = {
-    "batch_size": 32,
+    # "batch_size": 32,
+    "batch_size": 256,
     "learning_rate": 5e-6,
     # "num_epochs": 200,
     "num_epochs": 400,
@@ -49,8 +50,10 @@ data_folder = "/home/pbqv20/BlEmoRe_backup"
 
 
 
-train_metadata_path = os.path.join(data_folder, "train_metadata.csv")
-# train_metadata_path = os.path.join(data_folder, "train_metadata_balanced.csv")
+train_metadata_path = os.path.join(data_folder, "train_metadata.csv")              # default
+# train_metadata_path = os.path.join(data_folder, "train_metadata_balanced.csv")   # all actors in all folds
+# train_metadata_path = os.path.join(data_folder, "train_metadata_ONLY_SINGLE_EMOTIONS.csv")
+# train_metadata_path = os.path.join(data_folder, "train_metadata_ONLY_BLENDED_EMOTIONS.csv")
 
 test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
 
@@ -152,7 +155,8 @@ def evaluate_model(model, test_loader, alpha, beta, encoder):
 
 def run_validation(train_df, train_labels, encoders, model_types, args):
     # folds = [0, 1, 2, 3, 4]
-    folds = [0, 1]
+    # folds = [0, 1]
+    folds = [0]
 
     summary_rows = []
     for encoder in encoders:
