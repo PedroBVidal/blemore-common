@@ -50,19 +50,19 @@ data_folder = "/home/pbqv20/BlEmoRe_backup"
 
 
 
-train_metadata_path = os.path.join(data_folder, "train_metadata.csv")              # default
 # train_metadata_path = os.path.join(data_folder, "train_metadata_balanced.csv")   # all actors in all folds
 # train_metadata_path = os.path.join(data_folder, "train_metadata_ONLY_SINGLE_EMOTIONS.csv")
 # train_metadata_path = os.path.join(data_folder, "train_metadata_ONLY_BLENDED_EMOTIONS.csv")
-
-test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
+train_metadata_path = os.path.join(data_folder, "train_metadata.csv")              # default
+test_metadata_path = os.path.join(data_folder, "test_metadata.csv")                # default
 
 
 
 encoding_paths = {
     # vision
     # "openface": os.path.join(data_folder, "encoded_videos/static_data/openface_static_features.npz"),
-    "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
+    "imagebind":             os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features.npz"),
+    "imagebind11statistics": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_static_features_11statistics.npz"),
     # "imagebind": os.path.join(data_folder, "feat/pre_extracted_train_data/imagebind_STACK_features.npz"),
     # "clip": os.path.join(data_folder, "encoded_videos/static_data/clip_static_features.npz"),
     # "videoswintransformer": os.path.join(data_folder,
@@ -262,6 +262,7 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
     vision_encoders = ["imagebind"]
+    # vision_encoders = ["imagebind11statistics"]
     
     # audio_encoders = ["wavlm", "hubert"]
     audio_encoders = []
