@@ -54,9 +54,11 @@ hparams = {
 data_folder = "/home/pbqv20/BlEmoRe_backup"
 
 
-# train_metadata_path = os.path.join(data_folder, "train_metadata_balanced.csv")
-train_metadata_path = os.path.join(data_folder, "train_metadata.csv")
-test_metadata_path = os.path.join(data_folder, "test_metadata.csv")
+# train_metadata_path = os.path.join(data_folder, "train_metadata_balanced.csv")               # all actors in all folds
+# train_metadata_path = os.path.join(data_folder, "train_metadata_ONLY_SINGLE_EMOTIONS.csv")
+# train_metadata_path = os.path.join(data_folder, "train_metadata_ONLY_BLENDED_EMOTIONS.csv")
+train_metadata_path = os.path.join(data_folder, "train_metadata.csv")                          # default
+test_metadata_path = os.path.join(data_folder, "test_metadata.csv")                            # default
 
 
 encoding_paths = {
