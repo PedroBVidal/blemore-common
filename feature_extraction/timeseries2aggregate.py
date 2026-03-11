@@ -124,8 +124,10 @@ def main():
         # "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
         # "videomae":  "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
 
-        "imagebind_wavlm": ["/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
-                            "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/WavLM_large_train"]
+        # "imagebind_wavlm": ["/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
+        #                     "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/WavLM_large_train"]
+        "videomae_hubert": ["/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
+                            "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/HuBERT_large_train/"]
     }
 
     for encoder, path in encoding_paths.items():
