@@ -77,7 +77,7 @@ encoding_paths = {
     # "imagebind_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_wavlm_fused.npz"),
     # "imagebind_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/imagebind_hubert_fused.npz"),
     # "videomae_wavlm": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_wavlm_fused.npz"),
-    # "videomae_hubert": os.path.join(data_folder, "encoded_videos/static_data/fused/videomae_hubert_fused.npz"),
+    "videomae_hubert": os.path.join(data_folder, "feat/pre_extracted_train_data/videomae_hubert_fused.npz"),
 
     # multimodal
     # "hicmae": os.path.join(data_folder, "encoded_videos/static_data/hicmae_static_features.npz"),
@@ -181,7 +181,8 @@ def run_validation(train_df, train_labels, encoders, model_types, args):
 
     # Save validation results
     summary_df = pd.DataFrame(summary_rows)
-    summary_df.to_csv("validation_summary.csv", index=False)
+    # summary_df.to_csv("validation_summary.csv", index=False)
+    summary_df.to_csv(os.path.join(log_dir, f"validation_summary_folds={str(folds).replace(' ','')}.csv"), index=False)
     print("\nValidation Summary:")
     print(summary_df)
 
@@ -261,8 +262,9 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
-    vision_encoders = ["imagebind"]
+    # vision_encoders = ["imagebind"]
     # vision_encoders = ["imagebind11statistics"]
+    vision_encoders = ["videomae_hubert"]
     
     # audio_encoders = ["wavlm", "hubert"]
     audio_encoders = []
