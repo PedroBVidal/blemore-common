@@ -1,4 +1,4 @@
-import os
+import os, sys
 import json
 from collections import Counter
 
@@ -15,7 +15,7 @@ from model.post_process import get_top_2_predictions, probs2dict
 from trainer.trainer import Trainer
 from utils.create_soft_labels import create_labels
 from utils.generic_accuracy.accuracy_funcs import acc_presence_total, acc_salience_total
-from utils.set_splitting import prepare_split_2d, get_validation_split
+from utils.set_splitting import prepare_split_2d, get_validation_split, prepare_test_split_2d
 
 # --- Global Settings ---
 SEED = 42
@@ -81,6 +81,11 @@ encoding_paths = {
 
     # multimodal
     # "hicmae": os.path.join(data_folder, "encoded_videos/static_data/hicmae_static_features.npz"),
+}
+
+
+test_encoding_paths = {
+    "videomae_hubert": os.path.join(data_folder, "feat/pre_extracted_test_data/videomae_hubert_fused.npz"),
 }
 
 
@@ -260,6 +265,111 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
     print(test_summary_df.groupby(["encoder", "model"])[["test_acc_presence", "test_acc_salience"]].mean())
 
 
+
+def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_best_model_from_val=True, use_fold_id=None):
+    test_summary_rows = []
+
+    # Load validation summary
+    # summary_df = pd.read_csv("data/validation_summary_hicmae.csv")
+    summary_df = pd.read_csv("/home/bjgbiesseck/GitHub/PedroBVidal_blemore-common/runs/videomae_hubert_MLP_512_fold0_annotation=BASELINE-ON-videomae_hubert/validation_summary.csv")
+
+    for encoder in encoders:
+        encoding_path = encoding_paths[encoder]
+        test_encoding_path = test_encoding_paths[encoder]
+
+        for model_type in model_types:
+            # Filter for encoder and model type
+            fold_df = summary_df[(summary_df["encoder"] == encoder) & (summary_df["model"] == model_type)]
+
+            # Select alpha and beta from the best fold
+            best_row = fold_df.loc[
+                (0.5 * fold_df["best_acc_presence"] + 0.5 * fold_df["best_acc_salience"]).idxmax()
+            ]
+            alpha_best = best_row["best_alpha"]
+            beta_best = best_row["best_beta"]
+            fold_id = best_row["fold"]
+
+            print(f"Selected alpha: {alpha_best:.4f}, beta: {beta_best:.4f} for encoder={encoder}, model={model_type}")
+
+            # Train on full train set and evaluate on test set
+            train_files = train_df.filename.tolist()
+            test_files = test_df.filename.tolist()
+            # train_dataset, test_dataset = prepare_split_2d(train_files, train_labels, test_files, test_labels, encoding_path)
+            train_dataset, test_dataset = prepare_test_split_2d(train_files, train_labels, encoding_path, test_files, test_encoding_path)
+            # print('test_dataset.X.shape:', test_dataset.X.shape)
+            # sys.exit(0)
+
+            if use_best_model_from_val:
+
+                if use_fold_id is not None:
+                    fold_id = use_fold_id
+
+                # Use best model from validation
+                # best_model_path = f"checkpoints/{encoder}_{model_type}_fold{fold_id}_best.pth"
+                best_model_path = f"checkpoints/{encoder}_{model_type}_fold{int(fold_id)}_best.pth"
+                print(f"Loading model from {best_model_path}")
+
+                checkpoint = torch.load(best_model_path, map_location=device)
+                model = select_model(checkpoint['model_type'], checkpoint['input_dim'], checkpoint['output_dim'])
+                model.load_state_dict(checkpoint['model_state_dict'])
+                model.to(device)
+                test_loader = DataLoader(test_dataset, batch_size=hparams["batch_size"], shuffle=False)
+
+                # acc_presence, acc_salience = evaluate_model(model, test_loader, alpha_best, beta_best, encoder)
+                all_probs = []
+                model.eval()
+                with torch.no_grad():
+                    print("Performing test predictions...")
+                    for data, _ in test_loader:
+                        data = data.to(device)
+                        probs, _, _ = model(data)
+                        all_probs.append(probs.cpu().numpy())
+                    print("    Done!")
+
+                all_probs = np.concatenate(all_probs, axis=0)
+                top_2_probs = get_top_2_predictions(all_probs)
+                test_filenames = test_loader.dataset.filenames
+                test_filenames = [f"{filename}.mov" for filename in test_filenames]
+
+                final_preds = probs2dict(top_2_probs, test_filenames, alpha_best, beta_best)
+                final_preds = {"predictions": final_preds}
+
+                # path_test_file_predictions = "data/{}_test_predictions.json".format(encoder)
+                                              
+                path_test_file_predictions = f"data/{encoder}_{model_type}_fold{int(fold_id)}_test_predictions.json"
+                print(f"Saving test predictions: \'{path_test_file_predictions}\'")
+                with open(path_test_file_predictions, "w") as f:
+                    json.dump(final_preds, f, indent=4)
+                print("    Done!")
+
+            else:
+                acc_presence, acc_salience = train_and_test_from_scratch(train_dataset, test_dataset, model_type, alpha_best, beta_best, encoder)
+
+            # print(f"Test Accuracy Presence: {acc_presence:.4f}, Salience: {acc_salience:.4f}")
+            # print(f"Test Accuracy Presence: {acc_presence:.4f}, Salience: {acc_salience:.4f}")
+
+            # # Save test results
+            # test_summary_rows.append({
+            #     "encoder": encoder,
+            #     "model": model_type,
+            #     "alpha": alpha_best,
+            #     "beta": beta_best,
+            #     "test_acc_presence": acc_presence,
+            #     "test_acc_salience": acc_salience,
+            # })
+
+    # # Save test results
+    # test_summary_df = pd.DataFrame(test_summary_rows)
+    # test_summary_df.to_csv("test_summary.csv", index=False)
+    # print("\nTest Summary:")
+    # print(test_summary_df)
+
+    # # Encoder/model-averaged test results
+    # print("\nAveraged Test Results:")
+    # print(test_summary_df.groupby(["encoder", "model"])[["test_acc_presence", "test_acc_salience"]].mean())
+
+
+
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
     # vision_encoders = ["imagebind"]
@@ -286,13 +396,18 @@ def main(do_val=True, do_test=False, args=None):
         run_validation(train_df, train_labels, encoders, model_types, args)
 
     if do_test:
+        print(f"Loading train protocol \'{train_metadata_path}\'")
+        train_df = pd.read_csv(train_metadata_path)
+        train_labels = create_labels(train_df.to_dict(orient="records"))
+
         print(f"Loading test protocol \'{train_metadata_path}\'")
         test_df = pd.read_csv(test_metadata_path)
-        test_labels = create_labels(test_df.to_dict(orient="records"))
-
-        run_test(train_df, train_labels, test_df, test_labels, encoders, model_types, use_best_model_from_val=False)
+        # test_labels = create_labels(test_df.to_dict(orient="records"))
+        # run_test(train_df, train_labels, test_df, test_labels, encoders, model_types, use_best_model_from_val=False)
+        get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_best_model_from_val=True)
 
 
 if __name__ == "__main__":
     args = parse_args()
-    main(do_val=True, do_test=False, args=args)
+    # main(do_val=True, do_test=False, args=args)
+    main(do_val=False, do_test=True, args=args)

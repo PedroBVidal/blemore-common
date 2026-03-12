@@ -42,6 +42,41 @@ def prepare_split_2d(train_files, train_labels, val_files, val_labels, filepath)
     return train_dataset, val_dataset
 
 
+
+def prepare_test_split_2d(train_files, train_labels, filepath, test_files, test_filepath):
+    data = np.load(filepath)
+    X = data["X"]
+    filenames = data["filenames"]
+
+    # Map filenames to indices
+    name_to_idx = {name: i for i, name in enumerate(filenames)}
+    train_idx = [name_to_idx[f] for f in train_files]
+    # val_idx = [name_to_idx[f] for f in val_files]
+
+    # Subset and scale
+    X_train = X[train_idx]
+    # X_val = X[val_idx]
+
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(X_train)
+    # X_val = scaler.transform(X_val)
+
+    train_dataset = D2Dataset(X=X_train, labels=train_labels, filenames=train_files)
+    # val_dataset = D2Dataset(X=X_val, labels=val_labels, filenames=val_files)
+
+    # return train_dataset, val_dataset
+
+    # TEST DATA
+    data_test = np.load(test_filepath)
+    X_test = data_test["X"]
+    # filenames_test = data_test["filenames"]
+    test_labels = np.zeros((len(X_test), train_labels.shape[-1]), dtype=np.float32)
+    X_test = scaler.transform(X_test)
+    test_dataset = D2Dataset(X=X_test, labels=test_labels, filenames=test_files)
+    return train_dataset, test_dataset
+
+
+
 def prepare_split_subsampled(df, labels, fold_id, data_dir):
     (train_files, train_labels), (val_files, val_labels) = get_validation_split(df, labels, fold_id)
 
