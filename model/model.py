@@ -43,9 +43,27 @@ class ConfigurableLinearNN(nn.Module):
         logits = self.fc(x)
         probs = F.softmax(logits, dim=1)
 
+        # DEFAULT LOSS
+        # loss = None
+        # if targets is not None:
+        #     log_probs = probs.clamp(min=1e-8).log()
+        #     loss = F.kl_div(log_probs, targets, reduction="batchmean")
+
+        # LABEL_TO_INDEX = {
+        #     "ang": 0,
+        #     "disg": 1,
+        #     "fea": 2,
+        #     "hap": 3,
+        #     "sad": 4,
+        #     "neu": 5
+        # }
+        # WEIGHTED LOSS
         loss = None
         if targets is not None:
             log_probs = probs.clamp(min=1e-8).log()
-            loss = F.kl_div(log_probs, targets, reduction="batchmean")
+            target_purity = targets.max(dim=1)[0]
+            weights = torch.where(target_purity > 0.9, 2.0, 1.0)
+            loss_pointwise = F.kl_div(log_probs, targets, reduction="none").sum(dim=1)
+            loss = (loss_pointwise * weights).mean()
 
         return probs, logits, loss
