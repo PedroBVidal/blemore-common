@@ -68,7 +68,7 @@ class Trainer(object):
         ret["val_loss"] = avg_loss
         return ret
 
-    def train(self, writer=None, save_prefix="model"):
+    def train(self, writer=None, save_prefix="model", fold_id=0):
         best_epoch_stats = None
         best_model_path = None
 
@@ -104,7 +104,9 @@ class Trainer(object):
                 if val_score > self.best_val_score:
                     # Save best model
                     self.best_val_score = val_score
-                    best_model_path = os.path.join(self.save_dir, f"{save_prefix}_best.pth")
+                    # best_model_path = os.path.join(self.save_dir, f"{save_prefix}_best.pth")
+                    best_model_path = os.path.join(self.save_dir, save_prefix, f"{save_prefix}_fold{fold_id}_best.pth")
+                    os.makedirs(os.path.dirname(best_model_path), exist_ok=True)
                     torch.save({
                         'model_state_dict': self.model.state_dict(),
                         'input_dim': self.model.input_dim,

@@ -30,6 +30,7 @@ torch.backends.cudnn.benchmark = False
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--annotation', type=str, default='', help='Information to be added to output folder')
+    parser.add_argument('--test-model', type=str, default='', help='Path of weights file (.pt, .pth, etc.)')
     args = parser.parse_args()
     return args
 
@@ -100,7 +101,7 @@ def select_model(model_type, input_dim, output_dim):
         raise ValueError(f"Unknown model type: {model_type}")
 
 
-def train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix):
+def train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix, fold_id):
     train_loader = DataLoader(train_dataset, batch_size=hparams["batch_size"], shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=hparams["batch_size"], shuffle=False)
 
@@ -113,7 +114,7 @@ def train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix)
                       valid_data_loader=val_loader, subsample_aggregation=False)
 
     writer = SummaryWriter(log_dir=log_dir)
-    best_epoch, best_model_path = trainer.train(writer=writer, save_prefix=save_prefix)
+    best_epoch, best_model_path = trainer.train(writer=writer, save_prefix=save_prefix, fold_id=fold_id)
     writer.close()
     return best_epoch, best_model_path
 
@@ -174,11 +175,12 @@ def run_validation(train_df, train_labels, encoders, model_types, args):
                 (train_files, train_labels_fold), (val_files, val_labels) = get_validation_split(train_df, train_labels, fold_id)
                 train_dataset, val_dataset = prepare_split_2d(train_files, train_labels_fold, val_files, val_labels, encoding_path)
 
-                log_dir = f"runs/{encoder}_{model_type}_fold{fold_id}"
+                # save_prefix = f"{encoder}_{model_type}_fold{fold_id}"
+                save_prefix = f"{encoder}_{model_type}"
                 if args.annotation:
-                    log_dir += f'_annotation={args.annotation}'
-                save_prefix = f"{encoder}_{model_type}_fold{fold_id}"
-                best_epoch, _ = train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix)
+                    save_prefix += f'_annotation={args.annotation}'
+                log_dir = f"runs/{save_prefix}/{save_prefix}_fold{fold_id}"
+                best_epoch, _ = train_one_fold(train_dataset, val_dataset, model_type, log_dir, save_prefix, fold_id)
 
                 best_epoch.update({"encoder": encoder, "model": model_type, "fold": fold_id})
                 summary_rows.append(best_epoch)
@@ -187,7 +189,7 @@ def run_validation(train_df, train_labels, encoders, model_types, args):
     # Save validation results
     summary_df = pd.DataFrame(summary_rows)
     # summary_df.to_csv("validation_summary.csv", index=False)
-    summary_df.to_csv(os.path.join(log_dir, f"validation_summary_folds={str(folds).replace(' ','')}.csv"), index=False)
+    summary_df.to_csv(os.path.join(os.path.dirname(log_dir), f"validation_summary_folds={str(folds).replace(' ','')}.csv"), index=False)
     print("\nValidation Summary:")
     print(summary_df)
 
@@ -266,8 +268,9 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 
 
 
+
 def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_best_model_from_val=True, use_fold_id=None):
-    test_summary_rows = []
+    # test_summary_rows = []
 
     # Load validation summary
     # summary_df = pd.read_csv("data/validation_summary_hicmae.csv")
@@ -370,6 +373,7 @@ def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_b
 
 
 
+
 def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind", "videomae", "videoswintransformer", "openface", "clip"]
     # vision_encoders = ["imagebind"]
@@ -410,4 +414,12 @@ def main(do_val=True, do_test=False, args=None):
 if __name__ == "__main__":
     args = parse_args()
     # main(do_val=True, do_test=False, args=args)
-    main(do_val=False, do_test=True, args=args)
+    
+    if not args.test_model:
+        do_val  = True
+        do_test = False
+    else:
+        do_val  = False
+        do_test = True
+
+    main(do_val, do_test, args=args)
