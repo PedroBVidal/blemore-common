@@ -44,7 +44,7 @@ hparams = {
     "batch_size": 256,
     "learning_rate": 5e-6,
     # "num_epochs": 200,
-    "num_epochs": 4,
+    "num_epochs": 400,
     "weight_decay": 1e-3,
 }
 
