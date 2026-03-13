@@ -31,6 +31,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--annotation', type=str, default='', help='Information to be added to output folder')
     parser.add_argument('--test-model', type=str, default='', help='Path of weights file (.pt, .pth, etc.)')
+    parser.add_argument('--alpha', type=float, default=0.0)
+    parser.add_argument('--beta', type=float, default=0.0)
     args = parser.parse_args()
     return args
 
@@ -42,7 +44,7 @@ hparams = {
     "batch_size": 256,
     "learning_rate": 5e-6,
     # "num_epochs": 200,
-    "num_epochs": 400,
+    "num_epochs": 4,
     "weight_decay": 1e-3,
 }
 
@@ -269,12 +271,12 @@ def run_test(train_df, train_labels, test_df, test_labels, encoders, model_types
 
 
 
-def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_best_model_from_val=True, use_fold_id=None):
+def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_best_model_from_val=True, use_fold_id=None, args=None):
     # test_summary_rows = []
 
     # Load validation summary
     # summary_df = pd.read_csv("data/validation_summary_hicmae.csv")
-    summary_df = pd.read_csv("/home/bjgbiesseck/GitHub/PedroBVidal_blemore-common/runs/videomae_hubert_MLP_512_fold0_annotation=BASELINE-ON-videomae_hubert/validation_summary.csv")
+    # summary_df = pd.read_csv("/home/bjgbiesseck/GitHub/PedroBVidal_blemore-common/runs/videomae_hubert_MLP_512_fold0_annotation=BASELINE-ON-videomae_hubert/validation_summary.csv")
 
     for encoder in encoders:
         encoding_path = encoding_paths[encoder]
@@ -282,17 +284,16 @@ def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_b
 
         for model_type in model_types:
             # Filter for encoder and model type
-            fold_df = summary_df[(summary_df["encoder"] == encoder) & (summary_df["model"] == model_type)]
+            # fold_df = summary_df[(summary_df["encoder"] == encoder) & (summary_df["model"] == model_type)]
 
             # Select alpha and beta from the best fold
-            best_row = fold_df.loc[
-                (0.5 * fold_df["best_acc_presence"] + 0.5 * fold_df["best_acc_salience"]).idxmax()
-            ]
-            alpha_best = best_row["best_alpha"]
-            beta_best = best_row["best_beta"]
-            fold_id = best_row["fold"]
-
-            print(f"Selected alpha: {alpha_best:.4f}, beta: {beta_best:.4f} for encoder={encoder}, model={model_type}")
+            # best_row = fold_df.loc[
+            #     (0.5 * fold_df["best_acc_presence"] + 0.5 * fold_df["best_acc_salience"]).idxmax()
+            # ]
+            # alpha_best = best_row["best_alpha"]
+            # beta_best = best_row["best_beta"]
+            # fold_id = best_row["fold"]
+            # print(f"Selected alpha: {alpha_best:.4f}, beta: {beta_best:.4f} for encoder={encoder}, model={model_type}")
 
             # Train on full train set and evaluate on test set
             train_files = train_df.filename.tolist()
@@ -309,7 +310,8 @@ def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_b
 
                 # Use best model from validation
                 # best_model_path = f"checkpoints/{encoder}_{model_type}_fold{fold_id}_best.pth"
-                best_model_path = f"checkpoints/{encoder}_{model_type}_fold{int(fold_id)}_best.pth"
+                # best_model_path = f"checkpoints/{encoder}_{model_type}_fold{int(fold_id)}_best.pth"
+                best_model_path = args.test_model
                 print(f"Loading model from {best_model_path}")
 
                 checkpoint = torch.load(best_model_path, map_location=device)
@@ -322,7 +324,7 @@ def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_b
                 all_probs = []
                 model.eval()
                 with torch.no_grad():
-                    print("Performing test predictions...")
+                    print(f"Performing test predictions (alpha={args.alpha}, beta={args.beta})")
                     for data, _ in test_loader:
                         data = data.to(device)
                         probs, _, _ = model(data)
@@ -334,12 +336,15 @@ def get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_b
                 test_filenames = test_loader.dataset.filenames
                 test_filenames = [f"{filename}.mov" for filename in test_filenames]
 
+                alpha_best = args.alpha
+                beta_best = args.beta
                 final_preds = probs2dict(top_2_probs, test_filenames, alpha_best, beta_best)
                 final_preds = {"predictions": final_preds}
 
                 # path_test_file_predictions = "data/{}_test_predictions.json".format(encoder)
                                               
-                path_test_file_predictions = f"data/{encoder}_{model_type}_fold{int(fold_id)}_test_predictions.json"
+                # path_test_file_predictions = f"data/{encoder}_{model_type}_fold{int(fold_id)}_test_predictions.json"
+                path_test_file_predictions = f"{os.path.dirname(best_model_path)}/{os.path.splitext(os.path.basename(best_model_path))[0]}_test_predictions.json"
                 print(f"Saving test predictions: \'{path_test_file_predictions}\'")
                 with open(path_test_file_predictions, "w") as f:
                     json.dump(final_preds, f, indent=4)
@@ -408,7 +413,7 @@ def main(do_val=True, do_test=False, args=None):
         test_df = pd.read_csv(test_metadata_path)
         # test_labels = create_labels(test_df.to_dict(orient="records"))
         # run_test(train_df, train_labels, test_df, test_labels, encoders, model_types, use_best_model_from_val=False)
-        get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_best_model_from_val=True)
+        get_test_preds(train_df, train_labels, test_df, encoders, model_types, use_best_model_from_val=True, args=args)
 
 
 if __name__ == "__main__":
@@ -419,6 +424,9 @@ if __name__ == "__main__":
         do_val  = True
         do_test = False
     else:
+        assert os.path.isfile(args.test_model), f"Error, no such file \'{args.test_model}\'"
+        assert args.alpha > 0.0, f"Error args.alpha ({args.alpha}) <= 0.0"
+        assert args.beta  > 0.0, f"Error args.beta  ({args.alpha}) <= 0.0"
         do_val  = False
         do_test = True
 
