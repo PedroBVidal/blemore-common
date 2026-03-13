@@ -84,6 +84,7 @@ encoding_paths = {
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
     "rawimgs112x112":     os.path.join(data_folder, "feat/pre_extracted_train_data/rawimgs112x112_STACK_features_subsampling=5.npz"),
     "seq_rawimgs112x112": os.path.join(data_folder, "feat/pre_extracted_train_data/seq_rawimgs112x112_SEQUENCE_features_sequence=32.npz"),
+    "bfm": os.path.join(data_folder, "feat/pre_extracted_train_data/bfm_static_features.npz"),
 
     # audio
     # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
@@ -318,12 +319,14 @@ def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["seq_imagebind_sequence=512_padding=True"]
     # vision_encoders = ["seq_imagebind_sequence=1024_padding=True"]
     
-    vision_encoders = ["seq_imagebind_sequence=128_innerpadding=True"]
+    # vision_encoders = ["seq_imagebind_sequence=128_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=256_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=512_innerpadding=True"]
     # vision_encoders = ["seq_imagebind_sequence=1024_innerpadding=True"]
     # vision_encoders = ["rawimgs112x112"]
     # vision_encoders = ["seq_rawimgs112x112"]
+
+    vision_encoders = ["bfm"]
 
 
     # audio_encoders = ["wavlm", "hubert"]
@@ -336,11 +339,12 @@ def main(do_val=True, do_test=False, args=None):
     encoders = vision_encoders + audio_encoders + encoder_fusions
 
     # model_types = ["Linear", "MLP_256", "MLP_512"]
+    model_types = ["MLP_512"]
     # model_types = ["resnet18_1d"]
     # model_types = ["resnet18_2d"]
     # model_types = ["r50_lstm"]
     # model_types = ["lstm"]
-    model_types = ["lstm_att"]
+    # model_types = ["lstm_att"]
 
     if do_val:
         train_df = pd.read_csv(train_metadata_path)

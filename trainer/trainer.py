@@ -55,8 +55,9 @@ class Trainer(object):
         with torch.no_grad():
             for batch_idx, (data, target) in enumerate(self.valid_data_loader):
                 data, target = data.to(self.device), target.to(self.device)
-                if len(data.shape) == 2:
-                    data = torch.unsqueeze(data, 1)
+                print('data.shape:', data.shape, '    target.shape:', target.shape)
+                # if len(data.shape) == 2:
+                #     data = torch.unsqueeze(data, 1)
                 print(f'    validate()    batch_idx: {batch_idx}/{len(self.valid_data_loader)}    data.shape: {data.shape}    target.shape: {target.shape}', end='\r')
                 probs, logits, loss = self.model(data, target)
                 total_loss += loss.item()
