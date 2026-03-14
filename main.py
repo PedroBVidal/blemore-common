@@ -73,7 +73,8 @@ encoding_paths = {
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
     "bfm":                     os.path.join(data_folder, "feat/pre_extracted_train_data/bfm_static_features.npz"),
     "bfm_transfer_single_exp": os.path.join(data_folder, "feat/pre_extracted_train_data/bfm_transfer_exp_static_features_TRANSFER_ONLY_SINGLE_EMOTIONS.npz"),
-    "bfm_transfer_all_exp":    os.path.join(data_folder, "feat/pre_extracted_train_data/bfm_transfer_exp_static_features.npz"),
+    "bfm_transfer_all_exp":    os.path.join(data_folder, "feat/pre_extracted_train_data/bfm_transfer_exp_static_features_TRANSFER-BETWEEN-ALL-FOLDS.npz"),
+    "bfm_transfer_inner_fold":    os.path.join(data_folder, "feat/pre_extracted_train_data/bfm_transfer_exp_static_features_TRANSFER-ONLY-INNER-FOLDS.npz"),
 
     # audio
     # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
@@ -389,7 +390,8 @@ def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["videomae_hubert"]
     # vision_encoders = ["bfm"]
     # vision_encoders = ["bfm_transfer_single_exp"]
-    vision_encoders = ["bfm_transfer_all_exp"]
+    # vision_encoders = ["bfm_transfer_all_exp"]
+    vision_encoders = ["bfm_transfer_inner_fold"]
     
     # audio_encoders = ["wavlm", "hubert"]
     audio_encoders = []
