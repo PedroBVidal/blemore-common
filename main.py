@@ -72,6 +72,7 @@ encoding_paths = {
     #                                      "encoded_videos/static_data/videoswintransformer_static_features.npz"),
     # "videomae": os.path.join(data_folder, "encoded_videos/static_data/videomae_static_features.npz"),
     "bfm": os.path.join(data_folder, "feat/pre_extracted_train_data/bfm_static_features.npz"),
+    "bfm_transfer_exp": os.path.join(data_folder, "feat/pre_extracted_train_data/bfm_transfer_exp_static_features.npz"),
 
     # audio
     # "wavlm": os.path.join(data_folder, "encoded_videos/static_data/wavlm_static_features.npz"),
@@ -385,7 +386,8 @@ def main(do_val=True, do_test=False, args=None):
     # vision_encoders = ["imagebind"]
     # vision_encoders = ["imagebind11statistics"]
     # vision_encoders = ["videomae_hubert"]
-    vision_encoders = ["bfm"]
+    # vision_encoders = ["bfm"]
+    vision_encoders = ["bfm_transfer_exp"]
     
     # audio_encoders = ["wavlm", "hubert"]
     audio_encoders = []
