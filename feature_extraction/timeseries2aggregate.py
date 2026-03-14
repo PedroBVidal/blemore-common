@@ -148,10 +148,10 @@ def aggregate_bfm_transfer_expression_and_save_npz(source_dir, output_path, suff
                 video_name_ref = os.path.basename(path_subdir_video_ref)
                 video_info_ref = get_video_info(video_name_ref)
                 if idx_subdir_video_base != idx_subdir_video_ref and \
-                   video_info_base['type']    == video_info_ref['type'] and \
                    video_info_base['actor']   != video_info_ref['actor'] and \
                    video_info_base['emotion'] != video_info_ref['emotion']:
-                    print(f"{idx_subdir_video_base}/{len(all_subdirs_videos_paths)} video_name_base: '{video_name_base}'    {idx_subdir_video_ref}/{len(all_subdirs_videos_paths)} video_name_ref: {video_name_ref}                        ", end='\r')
+                    video_name_transf = video_name_ref.replace(suffix, "").replace(video_info_ref['actor'],video_info_base['actor'])
+                    print(f"{idx_subdir_video_base}/{len(all_subdirs_videos_paths)} video_name_base: '{video_name_base}'    {idx_subdir_video_ref}/{len(all_subdirs_videos_paths)} video_name_ref: {video_name_ref}    video_name_transf: {video_name_transf}                        ", end='\r')
                     # print(f"     {idx_subdir_video_ref}/{len(all_subdirs_videos_paths)} - '{video_name_ref}'")
                     # print("path_subdir_video_base:", path_subdir_video_base)
                     
@@ -194,7 +194,6 @@ def aggregate_bfm_transfer_expression_and_save_npz(source_dir, output_path, suff
                         np.percentile(video_frames_bfm_ref, 90, axis=0),
                     ])
 
-                    video_name_transf = video_name_ref.replace(suffix, "").replace(video_info_ref['actor'],video_info_base['actor'])
                     # print('video_name_transf:', video_name_transf)
                     # sys.exit(0)
                     all_features.append(agg)
