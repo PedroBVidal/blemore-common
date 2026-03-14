@@ -84,6 +84,132 @@ def aggregate_bfm_and_save_npz(source_dir, output_path, suffix=".npy"):
 
 
 
+def get_video_info(video_name=''):
+    video_type = 'single' if not 'mix' in video_name else 'mix'
+    info = {'type': video_type}
+    video_name_split = video_name.split('_')
+    if video_type == 'single':
+        actor, emotion, intensity, version = video_name_split
+        info['actor']     = actor
+        info['emotion']   = emotion
+        info['intensity'] = intensity
+        info['version']   = version
+    elif video_type == 'mix':
+        actor, _, emotion1, emotion2, perc1, perc2, version = video_name_split
+        info['actor']     = actor
+        info['emotion']   = emotion1 + '_' + emotion2
+        info['intensity'] = perc1    + '_' + perc2
+        info['version']   = version
+    return info
+
+def aggregate_bfm_transfer_expression_and_save_npz(source_dir, output_path, suffix=".npy"):
+    all_features = []
+    all_filenames = []
+    all_subdirs_videos_paths = get_imediate_subdirs_paths(source_dir)
+    
+    # Load default BFM features
+    print('Loading default BFM features...')
+    for idx_subdir_video, path_subdir_video in enumerate(all_subdirs_videos_paths):
+        video_name = os.path.basename(path_subdir_video)
+        print(f"{idx_subdir_video}/{len(all_subdirs_videos_paths)} - {path_subdir_video}                      ", end='\r')
+        files_paths = get_all_files_any_depth(path_subdir_video, extension=".npy")
+        first_frame_feature = np.load(files_paths[0])
+        video_frames_bfm = np.zeros((len(files_paths), first_frame_feature.shape[-1]), dtype=np.float32)
+        for idx_file, path_file in enumerate(files_paths):
+            x = np.load(path_file)
+            video_frames_bfm[idx_file,:] = x
+
+        agg = np.concatenate([
+            video_frames_bfm.mean(axis=0),
+            video_frames_bfm.std(axis=0),
+            np.percentile(video_frames_bfm, 10, axis=0),
+            np.percentile(video_frames_bfm, 25, axis=0),
+            np.percentile(video_frames_bfm, 50, axis=0),  # median
+            np.percentile(video_frames_bfm, 75, axis=0),
+            np.percentile(video_frames_bfm, 90, axis=0),
+        ])
+
+        all_features.append(agg)
+        all_filenames.append(video_name.replace(suffix, ""))
+    print()
+
+
+    # Transfer expressions
+    print('Transfering expressions through BFM features...')
+    for idx_subdir_video_base, path_subdir_video_base in enumerate(all_subdirs_videos_paths):
+        video_name_base = os.path.basename(path_subdir_video_base)
+        video_info_base = get_video_info(video_name_base)
+        # print('video_info_base:', video_info_base)
+        # sys.exit(0)
+
+        if video_info_base['type']=='single' and video_info_base['emotion']=='neu' and video_info_base['intensity']=='sit1':
+            # print(f"{idx_subdir_video_base}/{len(all_subdirs_videos_paths)} - '{video_name_base}'")
+            for idx_subdir_video_ref, path_subdir_video_ref in enumerate(all_subdirs_videos_paths):
+                video_name_ref = os.path.basename(path_subdir_video_ref)
+                video_info_ref = get_video_info(video_name_ref)
+                if idx_subdir_video_base != idx_subdir_video_ref and \
+                   video_info_base['type']    == video_info_ref['type'] and \
+                   video_info_base['actor']   != video_info_ref['actor'] and \
+                   video_info_base['emotion'] != video_info_ref['emotion']:
+                    print(f"{idx_subdir_video_base}/{len(all_subdirs_videos_paths)} video_name_base: '{video_name_base}'    {idx_subdir_video_ref}/{len(all_subdirs_videos_paths)} video_name_ref: {video_name_ref}                        ", end='\r')
+                    # print(f"     {idx_subdir_video_ref}/{len(all_subdirs_videos_paths)} - '{video_name_ref}'")
+                    # print("path_subdir_video_base:", path_subdir_video_base)
+                    
+                    files_paths_base = get_all_files_any_depth(path_subdir_video_base, extension=".npy")
+                    first_frame_feature_base = np.load(files_paths_base[0])
+                    # print('files_paths_base[0]:', files_paths_base[0])
+                    # print('first_frame_feature.shape:', first_frame_feature.shape)
+                    # sys.exit(0)
+
+                    # id_coeffs = coeffs[:, :80]         # face identity
+                    # exp_coeffs = coeffs[:, 80: 144]    # face expression
+                    # tex_coeffs = coeffs[:, 144: 224]
+                    # angles = coeffs[:, 224: 227]       # face rotation
+                    # gammas = coeffs[:, 227: 254]
+                    # translations = coeffs[:, 254:]     # face translation
+                    # return {
+                    #     'id': id_coeffs,
+                    #     'exp': exp_coeffs,
+                    #     'tex': tex_coeffs,
+                    #     'angle': angles,
+                    #     'gamma': gammas,
+                    #     'trans': translations
+                    # }
+                    files_paths_ref = get_all_files_any_depth(path_subdir_video_ref, extension=".npy")
+                    first_frame_feature_ref = np.load(files_paths_ref[0])
+                    video_frames_bfm_ref = np.zeros((len(files_paths_ref), first_frame_feature_ref.shape[-1]), dtype=np.float32)
+                    for idx_file_ref, path_file_ref in enumerate(files_paths_ref):
+                        x_ref = np.load(path_file_ref)
+                        x_ref[:,:80]     = first_frame_feature_base[:,:80]        # face identity
+                        x_ref[:,144:224] = first_frame_feature_base[:,144:224]    # texture
+                        video_frames_bfm_ref[idx_file_ref,:] = x_ref
+
+                    agg = np.concatenate([
+                        video_frames_bfm_ref.mean(axis=0),
+                        video_frames_bfm_ref.std(axis=0),
+                        np.percentile(video_frames_bfm_ref, 10, axis=0),
+                        np.percentile(video_frames_bfm_ref, 25, axis=0),
+                        np.percentile(video_frames_bfm_ref, 50, axis=0),  # median
+                        np.percentile(video_frames_bfm_ref, 75, axis=0),
+                        np.percentile(video_frames_bfm_ref, 90, axis=0),
+                    ])
+
+                    video_name_transf = video_name_ref.replace(suffix, "").replace(video_info_ref['actor'],video_info_base['actor'])
+                    # print('video_name_transf:', video_name_transf)
+                    # sys.exit(0)
+                    all_features.append(agg)
+                    all_filenames.append(video_name_transf)
+
+            print()
+
+    X = np.stack(all_features)
+    filenames = np.array(all_filenames)
+
+    np.savez(output_path, X=X, filenames=filenames)
+    print(f"Saved: {output_path} (X shape: {X.shape}, {len(filenames)} filenames)")
+
+
+
 def aggregate_and_save_npz(source_dir, output_path, suffix=".npy"):
     all_features = []
     all_filenames = []
@@ -204,7 +330,8 @@ def main():
 
         # "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
         # "videomae":  "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
-        "bfm": "/home/pbqv20/BlEmoRe_backup/data_frames_HRN_3D_reconstruction/train/all_parts/",
+        # "bfm": "/home/pbqv20/BlEmoRe_backup/data_frames_HRN_3D_reconstruction/train/all_parts/",
+        "bfm_transfer_exp": "/home/pbqv20/BlEmoRe_backup/data_frames_HRN_3D_reconstruction/train/all_parts/",
 
         # "imagebind_wavlm": ["/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
         #                     "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/WavLM_large_train"]
@@ -218,6 +345,8 @@ def main():
             output_path = os.path.join(base_static_dir, f"{encoder}_static_features.npz")
             if encoder == "bfm":
                 aggregate_bfm_and_save_npz(path, output_path, suffix=".npy")
+            elif encoder == "bfm_transfer_exp":
+                aggregate_bfm_transfer_expression_and_save_npz(path, output_path, suffix=".npy")
             else:
                 aggregate_and_save_npz(path, output_path, suffix=".npy")
         elif type(path) is list:
