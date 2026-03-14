@@ -3,6 +3,8 @@ import sys
 import numpy as np
 from tqdm import tqdm
 import re
+import pandas as pd
+
 
 
 def natural_sort_key(s):
@@ -102,7 +104,7 @@ def get_video_info(video_name=''):
         info['version']   = version
     return info
 
-def aggregate_bfm_transfer_expression_and_save_npz(source_dir, output_path, suffix=".npy"):
+def aggregate_bfm_transfer_expression_and_save_npz(source_dir, output_path, suffix=".npy", df=None):
     all_features = []
     all_filenames = []
     all_subdirs_videos_paths = get_imediate_subdirs_paths(source_dir)
@@ -139,15 +141,16 @@ def aggregate_bfm_transfer_expression_and_save_npz(source_dir, output_path, suff
     for idx_subdir_video_base, path_subdir_video_base in enumerate(all_subdirs_videos_paths):
         video_name_base = os.path.basename(path_subdir_video_base)
         video_info_base = get_video_info(video_name_base)
-        # print('video_info_base:', video_info_base)
-        # sys.exit(0)
+        fold_video_base = df[df['filename']==video_name_base]['fold'].tolist()[0]
 
         if video_info_base['type']=='single' and video_info_base['emotion']=='neu' and video_info_base['intensity']=='sit1':
             # print(f"{idx_subdir_video_base}/{len(all_subdirs_videos_paths)} - '{video_name_base}'")
             for idx_subdir_video_ref, path_subdir_video_ref in enumerate(all_subdirs_videos_paths):
                 video_name_ref = os.path.basename(path_subdir_video_ref)
                 video_info_ref = get_video_info(video_name_ref)
+                fold_video_ref = df[df['filename']==video_name_ref]['fold'].tolist()[0]
                 if idx_subdir_video_base != idx_subdir_video_ref and \
+                   fold_video_base == fold_video_ref and \
                    video_info_base['actor']   != video_info_ref['actor'] and \
                    video_info_base['emotion'] != video_info_ref['emotion']:
                     video_name_transf = video_name_ref.replace(suffix, "").replace(video_info_ref['actor'],video_info_base['actor'])
@@ -338,6 +341,20 @@ def main():
         #                     "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/HuBERT_large_train/"]
     }
 
+
+    '''
+    train_df:                 filename  video_id  gender  mix emotion_1  version  intensity_level  situation emotion_2  emotion_1_salience  emotion_2_salience  fold                                                                                                                                               
+    0               A102_ang_int1_ver1      A102       f    0       ang        1              1.0        NaN       NaN                 NaN                 NaN     1                                                                                                                                                         
+    1               A102_ang_int2_ver1      A102       f    0       ang        1              2.0        NaN       NaN                 NaN                 NaN     1                                                                                                                                                         
+    2               A102_ang_int3_ver1      A102       f    0       ang        1              3.0        NaN       NaN                 NaN                 NaN     1                                                                                                                                                         
+    3               A102_ang_int4_ver1      A102       f    0       ang        1              4.0        NaN       NaN                 NaN                 NaN     1                                                                                                                                                         
+    4              A102_disg_int1_ver1      A102       f    0      disg        1              1.0        NaN       NaN                 NaN                 NaN     1             
+    '''
+    train_metadata_path = "/home/pbqv20/BlEmoRe_backup/train_metadata.csv"
+    print(f"Loading train metadata: \'{train_metadata_path}\'")
+    train_df = pd.read_csv(train_metadata_path)
+
+
     for encoder, path in encoding_paths.items():
         print(f"Processing {encoder} from {path}...")
         if type(path) is str:
@@ -345,7 +362,7 @@ def main():
             if encoder == "bfm":
                 aggregate_bfm_and_save_npz(path, output_path, suffix=".npy")
             elif encoder == "bfm_transfer_exp":
-                aggregate_bfm_transfer_expression_and_save_npz(path, output_path, suffix=".npy")
+                aggregate_bfm_transfer_expression_and_save_npz(path, output_path, suffix=".npy", df=train_df)
             else:
                 aggregate_and_save_npz(path, output_path, suffix=".npy")
         elif type(path) is list:
