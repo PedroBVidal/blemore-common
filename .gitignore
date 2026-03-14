@@ -14,6 +14,7 @@ projector_visualization
 
 !data/submission_template.json
 !data/submission_template_codabench.zip
+data/
 
 sandbox/inspect.ipynb
 sandbox

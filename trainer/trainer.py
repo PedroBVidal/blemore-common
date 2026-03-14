@@ -1,8 +1,11 @@
+from json import encoder
+import json
+
 import torch
 import numpy as np
 import os
 
-from model.post_process import grid_search_thresholds
+from model.post_process import grid_search_thresholds, probs2dict, get_top_2_predictions
 from utils.subsample_utils import aggregate_subsamples
 
 class Trainer(object):
@@ -62,11 +65,21 @@ class Trainer(object):
 
         if self.subsample_aggregation:
             val_filenames, all_probs = aggregate_subsamples(val_filenames, all_logits)
+        
 
         ret = grid_search_thresholds(val_filenames, all_probs)
+        alpha = ret['alpha']
+        beta = ret['beta']
+
+        top_2_probs = get_top_2_predictions(all_probs)
+        final_preds = probs2dict(top_2_probs, val_filenames, alpha, beta)
+
+        #with open("data/{}_val_predictions.json".format(encoder), "w") as f:
+        #    json.dump(final_preds, f, indent=4)
+
         avg_loss = total_loss / len(self.valid_data_loader)
         ret["val_loss"] = avg_loss
-        return ret
+        return ret,final_preds
 
     def train(self, writer=None, save_prefix="model"):
         best_epoch_stats = None
@@ -80,7 +93,8 @@ class Trainer(object):
                 writer.add_scalar("Loss/train", train_loss, epoch)
 
             if self.valid_data_loader is not None:
-                stats = self.validate()
+                stats, final_preds = self.validate()
+
                 val_score = 0.5 * stats['acc_presence'] + 0.5 * stats['acc_salience']  # scoring metric
 
                 print(f"Epoch [{epoch + 1}/{self.epochs}], "
@@ -105,6 +119,11 @@ class Trainer(object):
                     # Save best model
                     self.best_val_score = val_score
                     best_model_path = os.path.join(self.save_dir, f"{save_prefix}_best.pth")
+
+                    with open("data/epoch_{}_{}_best_val_predictions.json".format(epoch,self.model.model_type), "w") as f:
+                        json.dump(final_preds, f, indent=4)
+
+
                     torch.save({
                         'model_state_dict': self.model.state_dict(),
                         'input_dim': self.model.input_dim,

@@ -13,6 +13,10 @@ def aggregate_and_save_npz(source_dir, output_path, suffix=".npy"):
         path = os.path.join(source_dir, fname)
         try:
             x = np.load(path)
+            # --- NEW LOGIC TO HANDLE (T, 1, D) SHAPES ---
+            if x.ndim == 3 and x.shape[1] == 1:
+                x = x.squeeze(axis=1)  # Converts (19, 1, 1408) to (19, 1408)
+
             if x.ndim != 2:
                 print(f"Skipping {fname}: shape {x.shape}")
                 continue
@@ -50,12 +54,15 @@ def main():
 
     encoding_paths = {
         # "openface": "/home/tim/Work/quantum/data/blemore/encoded_videos/openface_npy/",
-        "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data/ImageBind_test",
+        #"imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data/ImageBind_test",
         # "clip": "/home/tim/Work/quantum/data/blemore/encoded_videos/CLIP_npy/",
         # "dinov2": "/home/tim/Work/quantum/data/blemore/encoded_videos/dynamic_data/DINOv2_first_component/",
         # "videoswintransformer": "/home/tim/Work/quantum/data/blemore/encoded_videos/VideoSwinTransformer/",
         # "videomae": "/home/tim/Work/quantum/data/blemore/encoded_videos/VideoMAEv2_reshaped/",
-        # "hubert": "/media/user/Seagate Hub/mixed_emotion_challenge/audio_encodings/hubert_large/",
+        "videomaev2": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data/VideoMAEv2_test",
+        "hubert": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data/HuBERT_large_test",
+        "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data/ImageBind_test",
+        "wavlm": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data/WavLM_large_test"
         # "wavlm": "/media/user/Seagate Hub/mixed_emotion_challenge/audio_encodings/wavlm_large/",
         #"hicmae": "/home/tim/Work/quantum/data/blemore/encoded_videos/original_encodings/HiCMAE"
     }

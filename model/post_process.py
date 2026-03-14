@@ -1,3 +1,4 @@
+import json
 from unittest import result
 
 import numpy as np
@@ -30,7 +31,8 @@ def get_top_2_predictions(y_pred):
 def probs2dict(y_pred,
                filenames,
                presence_threshold=0.1,
-               salience_threshold=0.1):
+               salience_threshold=0.1,
+               for_submission=False):
     """
     Convert predicted probability vectors to a filename → prediction dictionary
     with canonical salience values and thresholding.
@@ -45,42 +47,49 @@ def probs2dict(y_pred,
     Returns:
         Dict[str, List[Dict[str, float]]]: Formatted predictions per file
     """
-
     y_pred = np.copy(y_pred)
-    result = {}
-    # The final JSON needs to start with this key
-    result = {"predictions": {}}
+    
+    # If for_submission is True, we wrap in the "predictions" head
+    if for_submission:
+        result = {"predictions": {}}
+        target_dict = result["predictions"]
+    else:
+        result = {}
+        target_dict = result
 
     for fname, vec in zip(filenames, y_pred):
-        json_fname = fname if fname.endswith(".mov") else f"{fname}.mov"
-        pred_top_index = np.argmax(vec)  # Get the index of the highest probability
+        # Only add extension if we are submitting
+        json_fname = fname
+        if for_submission and not fname.endswith(".mov"):
+            json_fname = f"{fname}.mov"
+            
+        pred_top_index = np.argmax(vec)
 
         if vec[pred_top_index] < presence_threshold:
             preds = [{"emotion": INDEX_TO_LABEL[pred_top_index], "salience": 100.0}]
-            result["predictions"][json_fname] = preds
+            target_dict[json_fname] = preds
             continue
 
-        vec[vec < presence_threshold] = 0  # mask low confidence
+        vec[vec < presence_threshold] = 0
         nonzero = np.where(vec > 0)[0]
 
         if len(nonzero) == 1:
             preds = [{"emotion": INDEX_TO_LABEL[nonzero[0]], "salience": 100.0}]
-            result["predictions"][json_fname] = preds
+            target_dict[json_fname] = preds
             continue
-        
+
         if NEUTRAL_INDEX in nonzero:
+            # Use argmax logic to avoid the index order bug
             if vec[pred_top_index] >= vec[NEUTRAL_INDEX]:
                 target = pred_top_index
             else:
                 target = NEUTRAL_INDEX
             
             preds = [{"emotion": INDEX_TO_LABEL[target], "salience": 100.0}]
-            result["predictions"][json_fname] = preds
+            target_dict[json_fname] = preds
             continue
-
-        # Get top 2 indices sorted by probability
-        sorted_idx = np.argsort(vec)[::-1]
-        i, j = sorted_idx[0], sorted_idx[1]
+        
+        i, j = nonzero
         p1, p2 = vec[i], vec[j]
 
         if abs(p1 - p2) <= salience_threshold:
@@ -90,14 +99,14 @@ def probs2dict(y_pred,
         else:
             sal1, sal2 = 0.3, 0.7
 
-        result["predictions"][json_fname] = [
+        target_dict[json_fname] = [
             {"emotion": INDEX_TO_LABEL[i], "salience": round(100 * sal1, 1)},
             {"emotion": INDEX_TO_LABEL[j], "salience": round(100 * sal2, 1)}
         ]
 
     return result
 
-
+    
 def grid_search_thresholds(filenames, preds, presence_weight=0.5, debug_plots=False):
     """
     Perform grid search over presence and salience thresholds to maximize weighted accuracy.
@@ -144,6 +153,9 @@ def grid_search_thresholds(filenames, preds, presence_weight=0.5, debug_plots=Fa
 
     # After best_alpha, best_beta have been found
     final_preds = probs2dict(preds, filenames, best_alpha, best_beta)
+
+    with open("data/last_val_predictions.json", "w") as f:
+        json.dump(final_preds, f, indent=4)
 
     if debug_plots:
         summarize_prediction_distribution(final_preds)

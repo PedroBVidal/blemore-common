@@ -2,9 +2,9 @@ import os
 
 def get_available_encoders():
     """Central source for active encoders and model types."""
-    vision_encoders = ["imagebind"]
+    vision_encoders = []
     audio_encoders = []
-    encoder_fusions = []
+    encoder_fusions = ["videomae_hubert"]
     
     encoders = vision_encoders + audio_encoders + encoder_fusions
     model_types = ["MLP_512"]
@@ -37,10 +37,10 @@ def get_encoding_paths(data_folder, mode="train"):
         "hubert": os.path.join(static_base, "hubert_static_features.npz"),
 
         # Fused
-        "imagebind_wavlm": os.path.join(static_base, "fused/imagebind_wavlm_fused.npz"),
-        "imagebind_hubert": os.path.join(static_base, "fused/imagebind_hubert_fused.npz"),
+        "imagebind_wavlm": os.path.join(base, "imagebind_wavlm_fused.npz"),
+        "imagebind_hubert": os.path.join(base, "imagebind_hubert_fused.npz"),
         "videomae_wavlm": os.path.join(static_base, "fused/videomae_wavlm_fused.npz"),
-        "videomae_hubert": os.path.join(static_base, "fused/videomae_hubert_fused.npz"),
+        "videomae_hubert": os.path.join(base, "videomae_hubert_fused.npz"),
         
         # Multimodal
         "hicmae": os.path.join(static_base, "hicmae_static_features.npz"),

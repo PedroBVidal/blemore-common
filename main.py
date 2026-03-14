@@ -134,6 +134,7 @@ def evaluate_model(model, test_loader, alpha, beta, encoder,isTest=False):
     model.eval()
     with torch.no_grad():
         for data, _ in test_loader:
+            print(data.shape)
             data = data.to(device)
             probs, _, _ = model(data)
             all_probs.append(probs.cpu().numpy())
@@ -142,7 +143,7 @@ def evaluate_model(model, test_loader, alpha, beta, encoder,isTest=False):
     top_2_probs = get_top_2_predictions(all_probs)
     test_filenames = test_loader.dataset.filenames
 
-    final_preds = probs2dict(top_2_probs, test_filenames, alpha, beta)
+    final_preds = probs2dict(top_2_probs, test_filenames, alpha, beta,isTest)
 
     with open("data/{}_test_predictions.json".format(encoder), "w") as f:
         json.dump(final_preds, f, indent=4)
@@ -229,13 +230,6 @@ def run_test(train_df, train_labels, test_df, encoders, model_types, use_best_mo
             test_files = test_df.filename.tolist()
             train_dataset, fitted_scaler = prepare_train_2d(train_files, train_labels, path_train)
 
-            # --- DEBUG START ---
-            if not hasattr(fitted_scaler, "mean_"):
-                print(f"🚨 WARNING: Scaler for {encoder} did not fit! Check filenames.")
-            else:
-                print(f"✅ Scaler for {encoder} fitted on {len(train_dataset)} samples.")
-            # --- DEBUG END ---
-
             test_dataset = prepare_test_2d(test_files, path_test,fitted_scaler)
 
             if use_best_model_from_val:
@@ -252,6 +246,7 @@ def run_test(train_df, train_labels, test_df, encoders, model_types, use_best_mo
 
                 #generate json with pred for codabech submission
                 acc_presence, acc_salience = evaluate_model(model, test_loader, alpha_best, beta_best, encoder,isTest=True)
+
             else:
                 acc_presence, acc_salience = train_and_test_from_scratch(train_dataset, test_dataset, model_type, alpha_best, beta_best, encoder)
 
@@ -308,7 +303,7 @@ def main(config, do_val=True, do_test=False, args=None):
         run_test(train_df, train_labels, test_df, encoders, model_types, use_best_model_from_val=True)
 '''
 
-def main(data_folder, do_val=True, do_test=False, args=None):
+def main(data_folder, do_val=False, do_test=True, args=None):
 
     # 1. Get the lists (Vision/Audio/Fusion combined)
     encoders_to_run, model_types = get_available_encoders()
@@ -327,4 +322,4 @@ def main(data_folder, do_val=True, do_test=False, args=None):
 
 if __name__ == "__main__":
     args = parse_args()
-    main(data_folder, do_val=False , do_test=True, args=args)
+    main(data_folder, do_val=False, do_test=True, args=args)
