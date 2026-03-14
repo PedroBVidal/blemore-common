@@ -316,6 +316,7 @@ def aggregate_fuse_and_save_npz(source_dir=[], output_path="", suffix=".npy"):
 def main():
     # base_static_dir = "/home/tim/Work/quantum/data/blemore/encoded_videos/static_data"
     base_static_dir = "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data"
+    # base_static_dir = "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data"
 
     # os.makedirs(base_static_dir, exist_ok=True)
 
@@ -333,6 +334,7 @@ def main():
         # "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
         # "videomae":  "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
         # "bfm": "/home/pbqv20/BlEmoRe_backup/data_frames_HRN_3D_reconstruction/train/all_parts/",
+        # "bfm": "/home/pbqv20/BlEmoRe_backup/data_frames_HRN_3D_reconstruction/test/test_videos/",
         "bfm_transfer_exp": "/home/pbqv20/BlEmoRe_backup/data_frames_HRN_3D_reconstruction/train/all_parts/",
 
         # "imagebind_wavlm": ["/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
