@@ -1,6 +1,9 @@
+<<<<<<< HEAD
 import json
 from unittest import result
 
+=======
+>>>>>>> origin/biesseck
 import numpy as np
 from collections import Counter
 
@@ -31,8 +34,12 @@ def get_top_2_predictions(y_pred):
 def probs2dict(y_pred,
                filenames,
                presence_threshold=0.1,
+<<<<<<< HEAD
                salience_threshold=0.1,
                for_submission=False):
+=======
+               salience_threshold=0.1):
+>>>>>>> origin/biesseck
     """
     Convert predicted probability vectors to a filename → prediction dictionary
     with canonical salience values and thresholding.
@@ -48,6 +55,7 @@ def probs2dict(y_pred,
         Dict[str, List[Dict[str, float]]]: Formatted predictions per file
     """
     y_pred = np.copy(y_pred)
+<<<<<<< HEAD
     
     # If for_submission is True, we wrap in the "predictions" head
     if for_submission:
@@ -71,10 +79,24 @@ def probs2dict(y_pred,
             continue
 
         vec[vec < presence_threshold] = 0
+=======
+    result = {}
+
+    for fname, vec in zip(filenames, y_pred):
+        pred_top_index = np.argmax(vec)  # Get the index of the highest probability
+
+        if vec[pred_top_index] < presence_threshold:
+            preds = [{"emotion": INDEX_TO_LABEL[pred_top_index], "salience": 100.0}]
+            result[fname] = preds
+            continue
+
+        vec[vec < presence_threshold] = 0  # mask low confidence
+>>>>>>> origin/biesseck
         nonzero = np.where(vec > 0)[0]
 
         if len(nonzero) == 1:
             preds = [{"emotion": INDEX_TO_LABEL[nonzero[0]], "salience": 100.0}]
+<<<<<<< HEAD
             target_dict[json_fname] = preds
             continue
 
@@ -89,6 +111,21 @@ def probs2dict(y_pred,
             target_dict[json_fname] = preds
             continue
         
+=======
+            result[fname] = preds
+            continue
+
+        if NEUTRAL_INDEX in nonzero:
+            if vec[nonzero[0]] >= vec[NEUTRAL_INDEX]:
+                # If neutral is present but has lower salience than the first emotion
+                preds = [{"emotion": INDEX_TO_LABEL[nonzero[0]], "salience": 100.0}]
+            else:
+                # If neutral is present and has higher salience than the first emotion
+                preds = [{"emotion": INDEX_TO_LABEL[NEUTRAL_INDEX], "salience": 100.0}]
+            result[fname] = preds
+            continue
+
+>>>>>>> origin/biesseck
         i, j = nonzero
         p1, p2 = vec[i], vec[j]
 
@@ -99,14 +136,22 @@ def probs2dict(y_pred,
         else:
             sal1, sal2 = 0.3, 0.7
 
+<<<<<<< HEAD
         target_dict[json_fname] = [
+=======
+        result[fname] = [
+>>>>>>> origin/biesseck
             {"emotion": INDEX_TO_LABEL[i], "salience": round(100 * sal1, 1)},
             {"emotion": INDEX_TO_LABEL[j], "salience": round(100 * sal2, 1)}
         ]
 
     return result
 
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> origin/biesseck
 def grid_search_thresholds(filenames, preds, presence_weight=0.5, debug_plots=False):
     """
     Perform grid search over presence and salience thresholds to maximize weighted accuracy.
@@ -154,9 +199,12 @@ def grid_search_thresholds(filenames, preds, presence_weight=0.5, debug_plots=Fa
     # After best_alpha, best_beta have been found
     final_preds = probs2dict(preds, filenames, best_alpha, best_beta)
 
+<<<<<<< HEAD
     with open("data/last_val_predictions.json", "w") as f:
         json.dump(final_preds, f, indent=4)
 
+=======
+>>>>>>> origin/biesseck
     if debug_plots:
         summarize_prediction_distribution(final_preds)
 

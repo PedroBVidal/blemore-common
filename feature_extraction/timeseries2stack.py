@@ -155,7 +155,11 @@ def main():
     args = parse_args()
 
     # base_static_dir = "/home/tim/Work/quantum/data/blemore/encoded_videos/static_data"
+<<<<<<< HEAD
     base_static_dir = "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data"
+=======
+    base_static_dir = "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data"
+>>>>>>> origin/biesseck
 
     # os.makedirs(base_static_dir, exist_ok=True)
 
@@ -172,8 +176,13 @@ def main():
 
         # "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/ImageBind_train/",
         # "videomae":  "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_train_data/VideoMAEv2_train/",
+<<<<<<< HEAD
         "imagebind": "/home/pbqv20/BlEmoRe_backup/feat/pre_extracted_test_data/ImageBind_test/",
         #"rawimgs112x112": "/home/pbqv20/BlEmoRe_backup/data_frames_DETECTED_FACES_RETINAFACE_scales=[0.25]_nms=0.4/imgs_112x112/train/all_parts"
+=======
+
+        "rawimgs112x112": "/home/pbqv20/BlEmoRe_backup/data_frames_DETECTED_FACES_RETINAFACE_scales=[0.25]_nms=0.4/imgs_112x112/train/all_parts"
+>>>>>>> origin/biesseck
     }
 
     for encoder, path in encoding_paths.items():
@@ -188,4 +197,8 @@ def main():
         print(f"Saved to {output_path}\n")
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     main()
+=======
+    main()
+>>>>>>> origin/biesseck
