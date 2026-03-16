@@ -93,6 +93,11 @@ encoding_paths = {
 
 test_encoding_paths = {
     "videomae_hubert": os.path.join(data_folder, "feat/pre_extracted_test_data/videomae_hubert_fused.npz"),
+
+    "bfm":                     os.path.join(data_folder, "feat/pre_extracted_test_data/bfm_static_features.npz"),
+    "bfm_transfer_single_exp": os.path.join(data_folder, "feat/pre_extracted_test_data/bfm_static_features.npz"),
+    "bfm_transfer_all_exp":    os.path.join(data_folder, "feat/pre_extracted_test_data/bfm_static_features.npz"),
+    "bfm_transfer_inner_fold": os.path.join(data_folder, "feat/pre_extracted_test_data/bfm_static_features.npz"),
 }
 
 
