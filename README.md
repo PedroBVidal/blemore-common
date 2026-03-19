@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-=======
+
 # Config environment
 ```
 ENV=blemore-common
@@ -8,8 +7,6 @@ conda activate $ENV
 pip install -r requirements.txt
 ```
 
-
->>>>>>> origin/biesseck
 # BlEmoRe-common
 
 This repository contains the codebase, baseline models, and evaluation tools for the **Blended Emotion Recognition Challenge (BlEmoRe)**.  
